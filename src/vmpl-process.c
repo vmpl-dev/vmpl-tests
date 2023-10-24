@@ -1,20 +1,26 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 
 #include "globals.h"
 #include "vmpl.h"
-#include "procmap.h"
 #include "svsm-vmpl.h"
+#ifdef USE_GLIBC
 #include "hypercall.h"
 #include "utils.h"
 #include "args.h"
+#else
+#include <sys/mman.h>
+#include <sys/resource.h>
+#endif
 
 static char line[1024];
 
 int main(int argc, char *argv[])
 {
+#ifdef USE_GLIBC
     struct arguments arguments;
 
     arguments.init = 0;
@@ -24,36 +30,39 @@ int main(int argc, char *argv[])
     if (arguments.enter) {
         vmpl_enter(argc, argv);
     }
-
-    hp_write(STDOUT_FILENO, "vmpl-process: hello world!\n", 27);
+#else
+    vmpl_enter(argc, argv);
+#endif
+    printf("vmpl-process: hello world!\n");
 
     int fd;
     ssize_t num_read;
-    fd = hp_open("/proc/self/maps", O_RDONLY, 0);
+    fd = open("/proc/self/maps", O_RDONLY, 0);
     if (fd == -1) {
-        hp_exit();
+        exit(EXIT_FAILURE);
     }
 
-    while ((num_read = hp_read(fd, line, 1024)) > 0) {
-        ssize_t num_written = hp_write(STDOUT_FILENO, line, num_read);
+    while ((num_read = read(fd, line, 1024)) > 0) {
+        ssize_t num_written = write(STDOUT_FILENO, line, num_read);
         if (num_written != num_read) {
-            hp_exit();
+            perror("vmpl-process: write");
+            exit(EXIT_FAILURE);
         }
     }
 
     if (num_read == -1) {
-        hp_exit();
+        perror("vmpl-process: read");
+        exit(EXIT_FAILURE);
     }
 
-    if (hp_close(fd) == -1) {
-        hp_exit();
+    if (close(fd) == -1) {
+        perror("vmpl-process: close");
+        exit(EXIT_FAILURE);
     }
 
-#if 0
-    vmpl_printf("vmpl-process: num-args = %d", argc);
-#endif
+    printf("vmpl-process: num-args = %d\n", argc);
 
-    hp_exit();
+    exit(EXIT_SUCCESS);
 
     return 0;
 }
