@@ -2,7 +2,7 @@ AUTOMAKE_OPTIONS = subdir-objects
 ACLOCAL_AMFLAGS = -I m4
 
 # Specify the include directories for vmpl library
-AM_CPPFLAGS = -I$(top_srcdir)/include -I../libvmpl/include -I../svsm-dev
+AM_CPPFLAGS = -I$(top_srcdir)/include
 AM_CFLAGS = -Wall -g -MD -O2 -z noexecstack
 AM_LDFLAGS = -L/usr/local/lib
 

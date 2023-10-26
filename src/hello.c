@@ -1,18 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
-
-// #include "cpu-x86.h"
-#ifdef USE_GLIBC
-#include "hypercall.h"
-#include "utils.h"
-#include "args.h"
-#else
 #include <sys/mman.h>
 #include <sys/resource.h>
-#endif
-#include "sys.h"
-#include "vmpl.h"
+#include <vmpl/vmpl.h>
+#include <vmpl/sys.h>
 
 static void recover(void)
 {

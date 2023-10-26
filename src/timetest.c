@@ -5,7 +5,7 @@
 #ifdef DUNE_TEST
 #include "libdune/dune.h"
 #else
-#include "vmpl.h"
+#include <vmpl/vmpl.h>
 #endif
 
 int main(int argc, char *argv[])

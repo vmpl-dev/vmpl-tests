@@ -7,8 +7,8 @@
 #include <sys/resource.h>
 #endif
 
-#include "sys.h"
-#include "vmpl.h"
+#include <vmpl/vmpl.h>
+
 static char line[1024];
 
 int main(int argc, char *argv[])
