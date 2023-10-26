@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include "cpu-x86.h"
+// #include "cpu-x86.h"
 #ifdef USE_GLIBC
 #include "hypercall.h"
 #include "utils.h"
@@ -11,6 +11,7 @@
 #include <sys/mman.h>
 #include <sys/resource.h>
 #endif
+#include "sys.h"
 #include "vmpl.h"
 
 static void recover(void)
@@ -27,19 +28,15 @@ static void divide_by_zero_handler(struct dune_tf *tf)
 
 int main(int argc, char *argv[])
 {
-	volatile int ret;
+	volatile int ret = 0;
 
 	printf("hello: not running dune yet\n");
 
-	ret = vmpl_enter(argc, argv);
-	if (ret) {
-		printf("failed to initialize dune\n");
-		return ret;
-	}
+	VMPL_ENTER;
 
 	printf("hello: now printing from dune mode\n");
 
-	dune_register_intr_handler(T_DIVIDE, divide_by_zero_handler);
+	dune_register_intr_handler(T_DE, divide_by_zero_handler);
 
 	// show_segment_registers();
 

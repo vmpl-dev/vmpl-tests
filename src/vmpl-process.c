@@ -2,37 +2,18 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <sys/mman.h>
-
-#include "globals.h"
-#include "vmpl.h"
-#include "svsm-vmpl.h"
-#ifdef USE_GLIBC
-#include "hypercall.h"
-#include "utils.h"
-#include "args.h"
-#else
+#ifndef __GLIBC__
 #include <sys/mman.h>
 #include <sys/resource.h>
 #endif
 
+#include "sys.h"
+#include "vmpl.h"
 static char line[1024];
 
 int main(int argc, char *argv[])
 {
-#ifdef USE_GLIBC
-    struct arguments arguments;
-
-    arguments.init = 0;
-    arguments.enter = 0;
-
-    parse_args(argc, argv, &arguments);
-    if (arguments.enter) {
-        vmpl_enter(argc, argv);
-    }
-#else
-    vmpl_enter(argc, argv);
-#endif
+    VMPL_ENTER;
     printf("vmpl-process: hello world!\n");
 
     int fd;

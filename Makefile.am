@@ -8,10 +8,27 @@ AM_LDFLAGS = -L/usr/local/lib
 
 # Specify the target and source files for the myapp project
 # Specify the linker flags and the libraries
-bin_PROGRAMS = vmpl_process hello fork timetest test test_sandbox
+bin_PROGRAMS = vmpl_process test_sys test_time test_vdso test_signal \
+                hello fork timetest test test_sandbox
 vmpl_process_SOURCES = src/vmpl-process.c
 vmpl_process_LDFLAGS = -static
 vmpl_process_LDADD = -L/usr/local/lib -lvmpl
+
+test_sys_SOURCES = src/test-sys.c
+test_sys_LDFLAGS = -static
+test_sys_LDADD = -L/usr/local/lib -lvmpl
+
+test_time_SOURCES = src/test-time.c
+test_time_LDFLAGS = -static
+test_time_LDADD = -L/usr/local/lib -lvmpl
+
+test_vdso_SOURCES = src/test-vdso.c
+test_vdso_LDFLAGS = -static
+test_vdso_LDADD = -L/usr/local/lib -lvmpl
+
+test_signal_SOURCES = src/test-signal.c
+test_signal_LDFLAGS = -static
+test_signal_LDADD = -L/usr/local/lib -lvmpl
 
 hello_SOURCES = src/hello.c
 hello_LDFLAGS = -static
