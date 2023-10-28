@@ -15,8 +15,17 @@
 #include <sys/prctl.h> // arch_prctl
 #include <sys/types.h> // open
 #include <sys/stat.h> // open
-#include <vmpl/sys.h>
-#include <vmpl/vmpl.h>
+#include <pthread.h> // pthread_create, pthread_join
+#ifdef _SECCOMP_H
+#include <seccomp.h> /* libseccomp */
+#endif
+#include <sys/ipc.h> // shmget, shmctl, ftok, IPC_CREAT 
+#include <sys/shm.h> // shmget, shmctl, shmat, shmdt
+#include <sys/msg.h>
+#include <sys/wait.h> // waitpid, WIFEXITED, WEXITSTATUS, WTERMSIG
+#include <vmpl/sys.h> // read_cr0, read_cr2, read_cr3, read_cr4, read_rflags, rdmsr
+#include <vmpl/vmpl.h>  // vmpl_enter, vmpl_server, vmpl_client
+#include <vmpl/log.h> // log_init, log_set_level
 
 #include "benchmark.h"
 
@@ -134,6 +143,8 @@ int test_sys(int argc, char *argv[])
     rflags = read_rflags();
     printf("vmpl-process: cr0 = 0x%lx, cr2 = 0x%lx, cr3 = 0x%lx\n", cr0, cr2, cr3);
     printf("vmpl-process: cr4 = 0x%lx, efer = 0x%lx, rflags = 0x%lx\n", cr4, efer, rflags);
+
+    return 0;
 }
 
 int test_vdso(int argc, char *argv[])
@@ -160,12 +171,12 @@ int test_signal(int argc, char *argv[])
 int test_debug(int argc, char *argv[])
 {
     // 读取DR0-DR7的值并打印
-    printf("DR0: 0x%llx\n", read_dr(0));
-    printf("DR1: 0x%llx\n", read_dr(1));
-    printf("DR2: 0x%llx\n", read_dr(2));
-    printf("DR3: 0x%llx\n", read_dr(3));
-    printf("DR6: 0x%llx\n", read_dr(6));
-    printf("DR7: 0x%llx\n", read_dr(7));
+    printf("DR0: 0x%lx\n", read_dr(0));
+    printf("DR1: 0x%lx\n", read_dr(1));
+    printf("DR2: 0x%lx\n", read_dr(2));
+    printf("DR3: 0x%lx\n", read_dr(3));
+    printf("DR6: 0x%lx\n", read_dr(6));
+    printf("DR7: 0x%lx\n", read_dr(7));
 
     return 0;
 }
@@ -255,7 +266,257 @@ int test_munmap(int argc, char *argv[])
     return 0;
 }
 
+#define SHM_SIZE 1024
+
+int tesh_shm(int argc, char *argv[])
+{
+    int shmid;
+    key_t key;
+    char *shm, *s;
+    pid_t pid1, pid2;
+
+    // 创建共享内存
+    key = ftok(".", 's');
+    shmid = shmget(key, SHM_SIZE, IPC_CREAT | 0666);
+    if (shmid < 0) {
+        perror("shmget");
+        exit(1);
+    }
+
+    // 创建子进程1
+    pid1 = fork();
+    if (pid1 < 0) {
+        perror("fork");
+        exit(1);
+    } else if (pid1 == 0) {
+        // 子进程1
+        vmpl_enter(argc, argv);
+        shm = shmat(shmid, NULL, 0);
+        if (shm == (char *) -1) {
+            perror("shmat");
+            exit(1);
+        }
+        printf("shm: %p\n", shm);
+#ifdef _ACCESS_SHM
+        for (s = shm; *s != '\0'; s++)
+            putchar(*s);
+        putchar('\n');
+        *shm = '*';
+#endif
+        exit(0);
+    }
+
+    sleep(2); // Wait for child to start
+
+    // 创建子进程2
+    pid2 = fork();
+    if (pid2 < 0) {
+        perror("fork");
+        exit(1);
+    } else if (pid2 == 0) {
+        // 子进程2
+        vmpl_enter(argc, argv);
+        shm = shmat(shmid, NULL, 0);
+        if (shm == (char *) -1) {
+            perror("shmat");
+            exit(1);
+        }
+        printf("shm: %p\n", shm);
+#ifdef _ACCESS_SHM
+        for (s = shm; *s != '\0'; s++)
+            putchar(*s);
+        putchar('\n');
+        *shm = '#';
+#endif
+        exit(0);
+    }
+
+    // 等待子进程结束
+    waitpid(pid1, NULL, 0);
+    waitpid(pid2, NULL, 0);
+
+    // 删除共享内存
+    shmctl(shmid, IPC_RMID, NULL);
+
+    return 0;
+}
+
+#define MSG_SIZE 1024
+
+struct msgbuf_t {
+    long mtype;             /* message type, must be > 0 */
+    char mtext[MSG_SIZE];   /* message data */
+};
+
+int test_msg(int argc, char *argv[])
+{
+    int msqid;
+    key_t key;
+    struct msgbuf_t buf;
+    pid_t pid1, pid2;
+
+    // 创建消息队列
+    key = ftok(".", 'm');
+    msqid = msgget(key, IPC_CREAT | 0666);
+    if (msqid < 0) {
+        perror("msgget");
+        exit(1);
+    }
+
+    // 创建子进程1
+    pid1 = fork();
+    if (pid1 < 0) {
+        perror("fork");
+        exit(1);
+    } else if (pid1 == 0) {
+        // 子进程1
+        vmpl_enter(argc, argv);
+        if (msgrcv(msqid, &buf, MSG_SIZE, 1, 0) < 0) {
+            perror("msgrcv");
+            exit(1);
+        }
+        printf("Received message: %s\n", buf.mtext);
+        exit(0);
+    }
+
+    sleep(2); // Wait for child to start
+
+    // 创建子进程2
+    pid2 = fork();
+    if (pid2 < 0) {
+        perror("fork");
+        exit(1);
+    } else if (pid2 == 0) {
+        // 子进程2
+        vmpl_enter(argc, argv);
+        buf.mtype = 1;
+        sprintf(buf.mtext, "Hello, world!");
+        if (msgsnd(msqid, &buf, sizeof(buf.mtext), IPC_NOWAIT) < 0) {
+            perror("msgsnd");
+            exit(1);
+        }
+        exit(0);
+    }
+
+    // 等待子进程结束
+    waitpid(pid1, NULL, 0);
+    waitpid(pid2, NULL, 0);
+
+    // 删除消息队列
+    msgctl(msqid, IPC_RMID, NULL);
+
+    return 0;
+}
+
+int test_fork(int argc, char *argv[])
+{
+    pid_t pid = fork();
+    if (pid == -1) {
+        perror("fork");
+        exit(EXIT_FAILURE);
+    } else if (pid == 0) {
+        // Child process
+        printf("Child process\n");
+        exit(EXIT_SUCCESS);
+    } else {
+        // Parent process
+        printf("Parent process\n");
+        int status;
+        waitpid(pid, &status, 0);
+        if (WIFEXITED(status)) {
+            printf("Child exited with status %d\n", WEXITSTATUS(status));
+        } else {
+            printf("Child exited with signal %d\n", WTERMSIG(status));
+        }
+    }
+
+    return 0;
+}
+
+int test_vfork(int argc, char *argv[])
+{
+    pid_t pid = vfork();
+    if (pid == -1) {
+        perror("vfork");
+        exit(EXIT_FAILURE);
+    } else if (pid == 0) {
+        // Child process
+        printf("Child process\n");
+        exit(EXIT_SUCCESS);
+    } else {
+        // Parent process
+        printf("Parent process\n");
+        int status;
+        waitpid(pid, &status, 0);
+        if (WIFEXITED(status)) {
+            printf("Child exited with status %d\n", WEXITSTATUS(status));
+        } else {
+            printf("Child exited with signal %d\n", WTERMSIG(status));
+        }
+    }
+
+    return 0;
+}
+
+void *thread_func(void *arg)
+{
+    printf("Hello from thread\n");
+    return NULL;
+}
+
+int test_pthread(int argc, char *argv[])
+{
+    pthread_t thread;
+    printf("Hello from main thread\n");
+    int ret = pthread_create(&thread, NULL, thread_func, NULL);
+    if (ret != 0) {
+        perror("pthread_create");
+        exit(EXIT_FAILURE);
+    }
+    pthread_join(thread, NULL);
+    printf("Joined thread\n");
+    return 0;
+}
+
+#ifdef _SECCOMP_H
+int test_seccomp(int argc, char *argv[])
+{
+    printf("step 1: unrestricted\n");
+
+    // Init the filter
+    scmp_filter_ctx ctx;
+    ctx = seccomp_init(SCMP_ACT_KILL); // default action: kill
+
+    // setup basic whitelist
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(rt_sigreturn), 0);
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(exit), 0);
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(read), 0);
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(write), 0);
+
+    // setup our rule
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(dup2), 2,
+                        SCMP_A0(SCMP_CMP_EQ, 1),
+                        SCMP_A1(SCMP_CMP_EQ, 2));
+
+    // build and load the filter
+    seccomp_load(ctx);
+    printf("step 2: only 'write' and dup2(1, 2) syscalls\n");
+
+    // Redirect stderr to stdout
+    dup2(1, 2);
+    printf("step 3: stderr redirected to stdout\n");
+
+    // Duplicate stderr to arbitrary fd
+    dup2(2, 42);
+    printf("step 4: !! YOU SHOULD NOT SEE ME !!\n");
+
+    // Success (well, not so in this case...)
+    return 0;
+}
+#endif
+
 void run_test(Test *test, int argc, char *argv[]) {
+    printf("Running test %s...\n", test->name);
     pid_t pid = fork();
     if (pid == -1) {
         perror("fork");
@@ -294,8 +555,19 @@ static Test tests[] = {
     {"test_mmap", test_mmap, vmpl_enter},
     {"test_munmap", test_munmap, vmpl_enter},
     {"test_mprotect", test_mprotect, vmpl_enter},
+    {"test_shm", tesh_shm, NULL},
+    {"test_msg", test_msg, NULL},
     {"test_signal", test_signal, vmpl_enter},
     {"test_vdso", test_vdso, vmpl_enter},
+    {"test_fork", test_fork, vmpl_enter},
+    {"test_vfork", test_vfork, vmpl_enter},
+    {"test_pthread", test_pthread, vmpl_enter},
+#ifdef _SECCOMP_H
+    {"test_seccomp", test_seccomp, vmpl_enter},
+#endif
+    {"vmpl_server", vmpl_server, vmpl_enter},
+    {"vmpl_client", vmpl_client, vmpl_enter},
+    {"bench_dune_ring", bench_dune_ring, vmpl_enter},
 };
 
 #define num_tests (sizeof(tests) / sizeof(Test))
@@ -305,15 +577,16 @@ struct test_args {
     int run_all;
     int list_tests;
     int show_help;
+    int log_level;
 };
 
 static void usage(const char *program_name) {
-    printf("Usage: %s [-a] [-t test_name] [-l] [-h]\n", program_name);
+    printf("Usage: %s [-a] [-t test_name] [-l] [-h] [-v log_level]\n", program_name);
 }
 
 static int parse_args(int argc, char *argv[], struct test_args *args) {
     int opt;
-    while ((opt = getopt(argc, argv, "alt:h")) != -1) {
+    while ((opt = getopt(argc, argv, "alt:hv:")) != -1) {
         switch (opt) {
             case 'a':
                 args->run_all = 1;
@@ -326,6 +599,9 @@ static int parse_args(int argc, char *argv[], struct test_args *args) {
                 break;
             case 'h':
                 args->show_help = 1;
+                break;
+            case 'v':
+                args->log_level = atoi(optarg);
                 break;
             case '?':
                 usage(argv[0]);
@@ -342,10 +618,19 @@ int main(int argc, char** argv)
         .test_name = NULL,
         .run_all = 0,
         .list_tests = 0,
-        .show_help = 0
+        .show_help = 0,
+        .log_level = LOG_LEVEL_INFO,
     };
     
     if (parse_args(argc, argv, &args) != 0) {
+        return 1;
+    }
+
+    if (args.log_level >= LOG_LEVEL_TRACE 
+        && args.log_level <= LOG_LEVEL_ERROR) {
+        set_log_level(args.log_level);
+    } else {
+        printf("Invalid log level %d\n", args.log_level);
         return 1;
     }
 
@@ -364,14 +649,12 @@ int main(int argc, char** argv)
 
     if (args.run_all) {
         for (int i = 0; i < num_tests; i++) {
-            printf("Running test %s...\n", tests[i].name);
             run_test(&tests[i], argc, argv);
         }
         return 0;
     } else if (args.test_name != NULL) {
         for (int i = 0; i < num_tests; i++) {
             if (strstr(args.test_name, tests[i].name) != NULL) {
-                printf("Running test %s...\n", tests[i].name);
                 run_test(&tests[i], argc, argv);
                 return 0;
             }

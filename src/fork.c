@@ -8,7 +8,6 @@
 #include "libdune/cpu-x86.h"
 #else
 #include <vmpl/vmpl.h>
-#include <vmpl/cpu-x86.h>
 #endif
 
 int main(int argc, char *argv[])

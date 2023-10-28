@@ -10,13 +10,9 @@ AM_LDFLAGS = -L/usr/local/lib
 # Specify the linker flags and the libraries
 bin_PROGRAMS = benchmark hello fork timetest test test_sandbox
 
-benchmark_SOURCES = src/benchmark.c src/server.c src/client.c
+benchmark_SOURCES = src/benchmark.c src/server.c src/client.c src/bench/bench_dune_ring.c
 benchmark_LDFLAGS = -static
-benchmark_LDADD = -L/usr/local/lib -lvmpl
-
-# test_seccomp_SOURCES = src/test-seccomp.c
-# test_seccomp_LDFLAGS = -static
-# test_seccomp_LDADD = -L/usr/local/lib -lvmpl -lseccomp
+benchmark_LDADD = -L/usr/local/lib -lvmpl -lpthread
 
 hello_SOURCES = src/hello.c
 hello_LDFLAGS = -static
