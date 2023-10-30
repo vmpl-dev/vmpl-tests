@@ -1,4 +1,5 @@
 // FILEPATH: /home/benshan/my-toy/test/src/benchmark.c
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h> // malloc
 #include <string.h> // strcmp ..
@@ -16,7 +17,8 @@
 #include <sys/types.h> // open
 #include <sys/stat.h> // open
 #include <pthread.h> // pthread_create, pthread_join
-#ifdef _SECCOMP_H
+#include <sched.h>
+#ifdef USE_SECCOMP
 #include <seccomp.h> /* libseccomp */
 #endif
 #include <sys/ipc.h> // shmget, shmctl, ftok, IPC_CREAT 
@@ -24,6 +26,7 @@
 #include <sys/msg.h>
 #include <sys/wait.h> // waitpid, WIFEXITED, WEXITSTATUS, WTERMSIG
 #include <vmpl/sys.h> // read_cr0, read_cr2, read_cr3, read_cr4, read_rflags, rdmsr
+#include <vmpl/apic.h>
 #include <vmpl/vmpl.h>  // vmpl_enter, vmpl_server, vmpl_client
 #include <vmpl/log.h> // log_init, log_set_level
 
@@ -44,6 +47,19 @@ static uint64_t get_time(void)
     struct timespec ts;
     syscall(SYS_clock_gettime, CLOCK_MONOTONIC_RAW, &ts);
     return (uint64_t)ts.tv_sec * 1000000000 + ts.tv_nsec;
+}
+
+int bind_cpu(int cpu)
+{
+    cpu_set_t mask;
+    CPU_ZERO(&mask);
+    CPU_SET(cpu, &mask);
+    if (sched_setaffinity(0, sizeof(mask), &mask) == -1) {
+        perror("sched_setaffinity");
+        exit(1);
+    }
+    // rest of your code
+    return 0;
 }
 
 void handle_sigint(int sig)
@@ -95,6 +111,7 @@ int test_socket(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     } else if (server_pid == 0) {
         // Child process
+        bind_cpu(THREAD_1_CORE);
         vmpl_enter(argc, argv);
         return vmpl_server(argc, argv);
     } else {
@@ -107,6 +124,7 @@ int test_socket(int argc, char *argv[]) {
             exit(EXIT_FAILURE);
         } else if (client_pid == 0) {
             // Child process
+            bind_cpu(THREAD_2_CORE);
             vmpl_enter(argc, argv);
             return vmpl_client(argc, argv);
         } else {
@@ -212,6 +230,23 @@ int test_syscall(int argc, char *argv[])
     return 0;
 }
 
+int test_rdtsc(int argc, char *argv[])
+{
+	uint64_t overhead = ~0UL;
+	int i;
+
+	for (i = 0; i < N; i++) {
+		uint64_t t0 = rdtsc();
+		asm volatile("");
+		uint64_t t1 = rdtscp();
+		if (t1 - t0 < overhead)
+			overhead = t1 - t0;
+	}
+
+    printf("rdtsc overhead: %lu cycles\n", overhead);
+	return 0;
+}
+
 int test_time(int argc, char *argv[])
 {
     pid_t pid;
@@ -290,6 +325,7 @@ int tesh_shm(int argc, char *argv[])
         exit(1);
     } else if (pid1 == 0) {
         // 子进程1
+        bind_cpu(THREAD_1_CORE);
         vmpl_enter(argc, argv);
         shm = shmat(shmid, NULL, 0);
         if (shm == (char *) -1) {
@@ -297,12 +333,12 @@ int tesh_shm(int argc, char *argv[])
             exit(1);
         }
         printf("shm: %p\n", shm);
-#ifdef _ACCESS_SHM
+        printf("Write to shm\n");
         for (s = shm; *s != '\0'; s++)
             putchar(*s);
         putchar('\n');
         *shm = '*';
-#endif
+        shmdt(shm);
         exit(0);
     }
 
@@ -315,6 +351,7 @@ int tesh_shm(int argc, char *argv[])
         exit(1);
     } else if (pid2 == 0) {
         // 子进程2
+        bind_cpu(THREAD_2_CORE);
         vmpl_enter(argc, argv);
         shm = shmat(shmid, NULL, 0);
         if (shm == (char *) -1) {
@@ -322,12 +359,12 @@ int tesh_shm(int argc, char *argv[])
             exit(1);
         }
         printf("shm: %p\n", shm);
-#ifdef _ACCESS_SHM
+        printf("Read from shm\n");
         for (s = shm; *s != '\0'; s++)
             putchar(*s);
         putchar('\n');
         *shm = '#';
-#endif
+        shmdt(shm);
         exit(0);
     }
 
@@ -370,6 +407,7 @@ int test_msg(int argc, char *argv[])
         exit(1);
     } else if (pid1 == 0) {
         // 子进程1
+        bind_cpu(THREAD_1_CORE);
         vmpl_enter(argc, argv);
         if (msgrcv(msqid, &buf, MSG_SIZE, 1, 0) < 0) {
             perror("msgrcv");
@@ -388,6 +426,7 @@ int test_msg(int argc, char *argv[])
         exit(1);
     } else if (pid2 == 0) {
         // 子进程2
+        bind_cpu(THREAD_2_CORE);
         vmpl_enter(argc, argv);
         buf.mtype = 1;
         sprintf(buf.mtext, "Hello, world!");
@@ -478,7 +517,7 @@ int test_pthread(int argc, char *argv[])
     return 0;
 }
 
-#ifdef _SECCOMP_H
+#ifdef USE_SECCOMP
 int test_seccomp(int argc, char *argv[])
 {
     printf("step 1: unrestricted\n");
@@ -547,6 +586,7 @@ void run_test(Test *test, int argc, char *argv[]) {
 static Test tests[] = {
     {"test_process", vmpl_process, vmpl_enter},
     {"test_socket", test_socket, NULL},
+    {"test_rdtsc", test_rdtsc, vmpl_enter},
     {"test_time", test_time, vmpl_enter},
     {"test_sys", test_sys, vmpl_enter},
     {"test_prctl", test_prctl, vmpl_enter},
@@ -562,7 +602,7 @@ static Test tests[] = {
     {"test_fork", test_fork, vmpl_enter},
     {"test_vfork", test_vfork, vmpl_enter},
     {"test_pthread", test_pthread, vmpl_enter},
-#ifdef _SECCOMP_H
+#ifdef USE_SECCOMP
     {"test_seccomp", test_seccomp, vmpl_enter},
 #endif
     {"vmpl_server", vmpl_server, vmpl_enter},
@@ -577,16 +617,76 @@ struct test_args {
     int run_all;
     int list_tests;
     int show_help;
+    int show_maps;
     int log_level;
 };
 
+void print_proc_self_maps() {
+    char command[100];
+    printf("proc/self/maps:\n");
+    sprintf(command, "cat /proc/%d/maps", getpid());
+    system(command);
+}
+
+#ifdef HAVE_ARGP
+#include <argp.h>
+
+static struct argp_option options[] = {
+    // define options
+    {"all-tests", 'a', 0, 0, "Run all tests", 1},
+    {"test-name", 't', "TEST_NAME", 0, "Run a specific test", 1},
+    {"list-tests", 'l', 0, 0, "List all tests", 1},
+    {"help", 'h', 0, 0, "Show help", 1},
+    {"show-maps", 'm', 0, 0, "Show /proc/self/maps", 1},
+    {"log-level", 'v', "LOG_LEVEL", 0, "Set log level", 1},
+    {0}
+};
+
+static error_t parse_opt(int key, char *arg, struct argp_state *state) {
+    // parse options
+    struct test_args *args = state->input;
+    switch (key) {
+        case 'a':
+            args->run_all = 1;
+            break;
+        case 't':
+            args->test_name = arg;
+            break;
+        case 'l':
+            args->list_tests = 1;
+            break;
+        case 'h':
+            args->show_help = 1;
+            break;
+        case 'm':
+            args->show_maps = 1;
+            break;
+        case 'v':
+            args->log_level = atoi(arg);
+            break;
+        case ARGP_KEY_ARG:
+            argp_usage(state);
+            break;
+        default:
+            return ARGP_ERR_UNKNOWN;
+    }
+    return 0;
+}
+
+static struct argp argp = {options, parse_opt};
+
+static int parse_args(int argc, char *argv[], struct test_args *args) {
+    argp_parse(&argp, argc, argv, 0, 0, args);
+    return 0;
+}
+#else
 static void usage(const char *program_name) {
-    printf("Usage: %s [-a] [-t test_name] [-l] [-h] [-v log_level]\n", program_name);
+    printf("Usage: %s [-a] [-t test_name] [-l] [-h] [-m] [-v log_level]\n", program_name);
 }
 
 static int parse_args(int argc, char *argv[], struct test_args *args) {
     int opt;
-    while ((opt = getopt(argc, argv, "alt:hv:")) != -1) {
+    while ((opt = getopt(argc, argv, "alt:hmv:")) != -1) {
         switch (opt) {
             case 'a':
                 args->run_all = 1;
@@ -600,6 +700,9 @@ static int parse_args(int argc, char *argv[], struct test_args *args) {
             case 'h':
                 args->show_help = 1;
                 break;
+            case 'm':
+                args->show_maps = 1;
+                break;
             case 'v':
                 args->log_level = atoi(optarg);
                 break;
@@ -611,6 +714,7 @@ static int parse_args(int argc, char *argv[], struct test_args *args) {
 
     return 0;
 }
+#endif
 
 int main(int argc, char** argv)
 {
@@ -619,6 +723,7 @@ int main(int argc, char** argv)
         .run_all = 0,
         .list_tests = 0,
         .show_help = 0,
+        .show_maps = 0,
         .log_level = LOG_LEVEL_INFO,
     };
     
@@ -646,6 +751,9 @@ int main(int argc, char** argv)
         }
         return 0;
     }
+
+    if (args.show_maps)
+        print_proc_self_maps();
 
     if (args.run_all) {
         for (int i = 0; i < num_tests; i++) {
