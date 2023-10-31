@@ -19,6 +19,10 @@ extern "C" {
 // number of bytes to send to the server.
 #define THREAD_1_CORE 1
 #define THREAD_2_CORE 2
+// posted-ipi test constants
+#define MAIN_THREAD 3
+#define NUM_THREADS 3
+#define TEST_VECTOR 0xF2
 
 extern int vmpl_server(int argc, char const *argv[]);
 extern int vmpl_client(int argc, char const *argv[]);
