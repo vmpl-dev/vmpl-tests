@@ -17,8 +17,11 @@ extern "C" {
 // port number for the server to listen on.
 #define PORT 8080
 // number of bytes to send to the server.
+#define SLEEP_TIME 1000000
 #define THREAD_1_CORE 1
 #define THREAD_2_CORE 2
+#define THREAD_3_CORE 3
+#define THREAD_4_CORE 4
 // posted-ipi test constants
 #define MAIN_THREAD 3
 #define NUM_THREADS 3

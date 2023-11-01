@@ -16,12 +16,15 @@
 #include <sys/prctl.h> // arch_prctl
 #include <sys/types.h> // open
 #include <sys/stat.h> // open
+#include <sys/time.h> // gettimeofday
+#include <time.h> // time
 #include <pthread.h> // pthread_create, pthread_join
 #include <sched.h>
 #ifdef USE_SECCOMP
 #include <seccomp.h> /* libseccomp */
 #endif
 #include <sys/ipc.h> // shmget, shmctl, ftok, IPC_CREAT 
+#include <sys/sem.h> // semget, semctl, semop
 #include <sys/shm.h> // shmget, shmctl, shmat, shmdt
 #include <sys/msg.h>
 #include <sys/wait.h> // waitpid, WIFEXITED, WEXITSTATUS, WTERMSIG
@@ -116,7 +119,7 @@ int test_socket(int argc, char *argv[]) {
         return vmpl_server(argc, argv);
     } else {
         // Parent process
-        sleep(2); // Wait for server to start
+        sleep(SLEEP_TIME); // Wait for server to start
         pid_t client_pid = fork();
         if (client_pid == -1) {
             perror("fork");
@@ -161,6 +164,55 @@ int test_sys(int argc, char *argv[])
     rflags = read_rflags();
     printf("vmpl-process: cr0 = 0x%lx, cr2 = 0x%lx, cr3 = 0x%lx\n", cr0, cr2, cr3);
     printf("vmpl-process: cr4 = 0x%lx, efer = 0x%lx, rflags = 0x%lx\n", cr4, efer, rflags);
+
+    return 0;
+}
+
+static void vc_handler(struct dune_tf *tf)
+{
+    printf("vc_handler: received VMM communication\n");
+    exit(EXIT_SUCCESS);
+}
+
+int test_cpuid(int argc, char *argv[])
+{
+    unsigned int eax, ebx, ecx, edx;
+
+    dune_register_intr_handler(T_VC, vc_handler);
+
+    eax = 0x80000008; // Get virtual and physical address sizes
+    __asm__ volatile(
+        "cpuid"
+        : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
+        : "a"(eax)
+    );
+
+    printf("Physical address size: %u bits\n", eax & 0xFF);
+    printf("Virtual address size: %u bits\n", (eax >> 8) & 0xFF);
+
+    return 0;
+}
+
+int test_vsyscall(int argc, char *argv[])
+{
+    struct timeval tv;
+    struct timezone tz;
+    time_t t;
+
+    /* 测试 gettimeofday 函数 */
+    printf("test gettimeofday\n");
+    if (gettimeofday(&tv, &tz) == 0)
+        printf("gettimeofday: %ld.%06ld\n", (long)tv.tv_sec, (long)tv.tv_usec);
+    else
+        perror("gettimeofday");
+
+    /* 测试 time 函数 */
+    printf("test time\n");
+    t = time(NULL);
+    if (t != (time_t)-1)
+        printf("time: %ld\n", (long)t);
+    else
+        perror("time");
 
     return 0;
 }
@@ -301,6 +353,47 @@ int test_munmap(int argc, char *argv[])
     return 0;
 }
 
+sem_t sem;
+
+void* thread_func(void* arg) {
+    bind_cpu(THREAD_1_CORE);
+    vmpl_enter(NULL, NULL);
+    printf("Thread waiting on semaphore...\n");
+    sem_wait(&sem);
+    printf("Thread got semaphore!\n");
+    return NULL;
+}
+
+void* post_func(void* arg) {
+    bind_cpu(THREAD_2_CORE);
+    vmpl_enter(NULL, NULL);
+    sleep(2);
+    printf("Posting to semaphore...\n");
+    sem_post(&sem);
+    return NULL;
+}
+
+int test_sem(void) {
+    pthread_t thread1, thread2;
+
+    printf("Initializing semaphore...\n");
+    sem_init(&sem, 0, 0);
+
+    printf("Creating threads...\n");
+    pthread_create(&thread1, NULL, thread_func, NULL);
+    pthread_create(&thread2, NULL, post_func, NULL);
+
+    printf("Waiting for threads to finish...\n");
+    pthread_join(thread1, NULL);
+    pthread_join(thread2, NULL);
+
+    printf("Destroying semaphore...\n");
+    sem_destroy(&sem);
+
+    printf("Done!\n");
+    return 0;
+}
+
 #define SHM_SIZE 1024
 
 int tesh_shm(int argc, char *argv[])
@@ -342,7 +435,7 @@ int tesh_shm(int argc, char *argv[])
         exit(0);
     }
 
-    sleep(2); // Wait for child to start
+    sleep(SLEEP_TIME); // Wait for child to start
 
     // 创建子进程2
     pid2 = fork();
@@ -417,7 +510,7 @@ int test_msg(int argc, char *argv[])
         exit(0);
     }
 
-    sleep(2); // Wait for child to start
+    sleep(SLEEP_TIME); // Wait for child to start
 
     // 创建子进程2
     pid2 = fork();
@@ -696,15 +789,18 @@ static Test tests[] = {
     {"test_rdtsc", test_rdtsc, vmpl_enter},
     {"test_time", test_time, vmpl_enter},
     {"test_sys", test_sys, vmpl_enter},
+    {"test_cpuid", test_cpuid, vmpl_enter},
     {"test_prctl", test_prctl, vmpl_enter},
     {"test_debug", test_debug, vmpl_enter},
     {"test_syscall", test_syscall, vmpl_enter},
     {"test_mmap", test_mmap, vmpl_enter},
     {"test_munmap", test_munmap, vmpl_enter},
     {"test_mprotect", test_mprotect, vmpl_enter},
+    {"test_sem", test_sem, NULL},
     {"test_shm", tesh_shm, NULL},
     {"test_msg", test_msg, NULL},
     {"test_signal", test_signal, vmpl_enter},
+    {"test_vsyscall", test_vsyscall, vmpl_enter},
     {"test_vdso", test_vdso, vmpl_enter},
     {"test_fork", test_fork, vmpl_enter},
     {"test_vfork", test_vfork, vmpl_enter},
