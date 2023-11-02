@@ -23,11 +23,15 @@
 #ifdef USE_SECCOMP
 #include <seccomp.h> /* libseccomp */
 #endif
+#ifdef __GLIBC__
 #include <sys/ipc.h> // shmget, shmctl, ftok, IPC_CREAT 
 #include <sys/sem.h> // semget, semctl, semop
 #include <sys/shm.h> // shmget, shmctl, shmat, shmdt
+#else
 #include <sys/msg.h>
 #include <sys/wait.h> // waitpid, WIFEXITED, WEXITSTATUS, WTERMSIG
+#include <semaphore.h>
+#endif
 #include <vmpl/sys.h> // read_cr0, read_cr2, read_cr3, read_cr4, read_rflags, rdmsr
 #include <vmpl/apic.h>
 #include <vmpl/vmpl.h>  // vmpl_enter, vmpl_server, vmpl_client
@@ -328,8 +332,15 @@ int test_mmap(int argc, char *argv[])
 {
     int fd = open("/dev/zero", O_RDONLY);
     void *addr = mmap(NULL, 4096, PROT_READ, MAP_PRIVATE, fd, 0);
-    printf("addr: %p\n", addr);
-    close(fd);
+    if (addr == MAP_FAILED) {
+        perror("mmap");
+        close(fd);
+        exit(EXIT_FAILURE);
+    } else {
+        printf("mmap: %p\n", addr);
+        close(fd);
+        exit(EXIT_SUCCESS);
+    }
     return 0;
 }
 
@@ -353,9 +364,35 @@ int test_munmap(int argc, char *argv[])
     return 0;
 }
 
+int test_sbrk() {
+    void *cur_brk, *tmp_brk = NULL;
+
+    printf("The original program break: %p\n", sbrk(0));
+
+    tmp_brk = sbrk(4096);
+    if (tmp_brk == (void *)-1) {
+        printf("ERROR: sbrk failed. Exiting...\n");
+        return -1;
+    }
+
+    cur_brk = sbrk(0);
+    printf("The program break after incrementing: %p\n", cur_brk);
+
+    tmp_brk = sbrk(-4096);
+    if (tmp_brk == (void *)-1) {
+        printf("ERROR: sbrk failed. Exiting...\n");
+        return -1;
+    }
+
+    cur_brk = sbrk(0);
+    printf("The program break after decrementing: %p\n", cur_brk);
+
+    return 0;
+}
+
 sem_t sem;
 
-void* thread_func(void* arg) {
+void* sem_thread_func(void* arg) {
     bind_cpu(THREAD_1_CORE);
     vmpl_enter(NULL, NULL);
     printf("Thread waiting on semaphore...\n");
@@ -364,10 +401,10 @@ void* thread_func(void* arg) {
     return NULL;
 }
 
-void* post_func(void* arg) {
+void* sem_post_func(void* arg) {
     bind_cpu(THREAD_2_CORE);
     vmpl_enter(NULL, NULL);
-    sleep(2);
+    sleep(SLEEP_TIME);
     printf("Posting to semaphore...\n");
     sem_post(&sem);
     return NULL;
@@ -380,8 +417,8 @@ int test_sem(void) {
     sem_init(&sem, 0, 0);
 
     printf("Creating threads...\n");
-    pthread_create(&thread1, NULL, thread_func, NULL);
-    pthread_create(&thread2, NULL, post_func, NULL);
+    pthread_create(&thread1, NULL, sem_thread_func, NULL);
+    pthread_create(&thread2, NULL, sem_post_func, NULL);
 
     printf("Waiting for threads to finish...\n");
     pthread_join(thread1, NULL);
@@ -567,6 +604,7 @@ int test_fork(int argc, char *argv[])
 
 int test_vfork(int argc, char *argv[])
 {
+    /* vfork syscall cannot be made from C code */
     pid_t pid = vfork();
     if (pid == -1) {
         perror("vfork");
@@ -762,10 +800,18 @@ void run_test(Test *test, int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     } else if (pid == 0) {
         // Child process
-        if (test->prolog != NULL)
-            test->prolog(argc, argv);
-        int ret = test->exec_func(argc, argv);
-        exit(ret);
+        int ret;
+        if (test->prolog != NULL) {
+            ret = test->prolog(argc, argv); 
+            if (ret) {
+                printf("Enter dune mode failed!\n");
+                exit(ret);
+            }
+        }
+        if (test->exec_func) {
+            ret = test->exec_func(argc, argv);
+            exit(ret);
+        }
     } else {
         // Parent process
         int status;
@@ -785,6 +831,7 @@ void run_test(Test *test, int argc, char *argv[]) {
 
 static Test tests[] = {
     {"test_process", vmpl_process, vmpl_enter},
+    {"test_bitmap", test_bitmap, vmpl_enter},
     {"test_socket", test_socket, NULL},
     {"test_rdtsc", test_rdtsc, vmpl_enter},
     {"test_time", test_time, vmpl_enter},
@@ -796,7 +843,9 @@ static Test tests[] = {
     {"test_mmap", test_mmap, vmpl_enter},
     {"test_munmap", test_munmap, vmpl_enter},
     {"test_mprotect", test_mprotect, vmpl_enter},
+    {"test_sbrk", test_sbrk, vmpl_enter},
     {"test_sem", test_sem, NULL},
+    {"test_semaphore", test_semaphore, NULL},
     {"test_shm", tesh_shm, NULL},
     {"test_msg", test_msg, NULL},
     {"test_signal", test_signal, vmpl_enter},
