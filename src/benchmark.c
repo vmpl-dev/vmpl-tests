@@ -310,21 +310,27 @@ int test_time(int argc, char *argv[])
     uint64_t end_time;
     uint64_t total_time = 0;
 
+#ifdef CONFIG_VMPL_VDSO
     start_time = get_time();
+    for (int i = 0; i < NUM_ITERATIONS; i++) {
+        pid = getpid();
+    }
     end_time = get_time();
+    total_time = end_time - start_time;
+
 
     printf("Elapsed time: %lu ns\n", end_time - start_time);
-
+#else
+    start_time = rdtsc();
     for (int i = 0; i < NUM_ITERATIONS; i++)
     {
-        start_time = rdtsc();
         pid = getpid();
-        end_time = rdtsc();
-        total_time += end_time - start_time;
     }
+    end_time = rdtsc();
+    total_time = end_time - start_time;
 
     printf("Average time: %lu cycles\n", total_time / NUM_ITERATIONS);
-
+#endif
     return 0;
 }
 
