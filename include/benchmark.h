@@ -32,6 +32,8 @@ extern int vmpl_client(int argc, char const *argv[]);
 extern int bench_dune_ring(int argc, char const *argv[]);
 extern int test_semaphore(int argc, char *argv[]);
 extern int test_bitmap(int argc, char const *argv[]);
+extern int test_hbitmap(int argc, char const *argv[]);
+extern int test_bmap(int argc, char const *argv[]);
 
 #ifdef __cplusplus
 }

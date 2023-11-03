@@ -838,6 +838,8 @@ void run_test(Test *test, int argc, char *argv[]) {
 static Test tests[] = {
     {"test_process", vmpl_process, vmpl_enter},
     {"test_bitmap", test_bitmap, vmpl_enter},
+    {"test_hbitmap", test_hbitmap, vmpl_enter},
+    {"test_bmap", test_bmap, vmpl_enter},
     {"test_socket", test_socket, NULL},
     {"test_rdtsc", test_rdtsc, vmpl_enter},
     {"test_time", test_time, vmpl_enter},
