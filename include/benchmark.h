@@ -34,6 +34,8 @@ extern int test_semaphore(int argc, char *argv[]);
 extern int test_bitmap(int argc, char const *argv[]);
 extern int test_hbitmap(int argc, char const *argv[]);
 extern int test_bmap(int argc, char const *argv[]);
+extern int test_mxml(int argc, char *argv[]);
+extern int test_zlib(int argc, char *argv[]);
 
 #ifdef __cplusplus
 }

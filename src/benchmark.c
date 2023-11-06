@@ -35,6 +35,7 @@
 #include <vmpl/sys.h> // read_cr0, read_cr2, read_cr3, read_cr4, read_rflags, rdmsr
 #include <vmpl/apic.h>
 #include <vmpl/vmpl.h>  // vmpl_enter, vmpl_server, vmpl_client
+#include <vmpl/seimi.h> // sa_alloc, sa_free
 #include <vmpl/log.h> // log_init, log_set_level
 
 #include "benchmark.h"
@@ -367,6 +368,64 @@ int test_munmap(int argc, char *argv[])
     printf("addr: %p\n", addr);
     munmap(addr, 4096);
     close(fd);
+    return 0;
+}
+
+int test_seimi(int argc, char *argv[])
+{
+    char *seimi_user;
+
+    // Allocate 4096 bytes of memory
+    seimi_user = sa_alloc(4096, false, NULL);
+    sprintf(seimi_user, "Hello, world!");
+
+    // Print the address of seimi_user
+    printf("seimi_user: %s\n", seimi_user);
+
+    // Now, we enter VMPL mode
+    vmpl_enter(NULL, NULL);
+    printf("seimi_user[vmpl]: %p\n", seimi_user);
+
+    // Write to seimi_user (protected)
+    __asm__ volatile("stac\n");
+    sprintf(seimi_user, "Hello, SEIMI!");
+    printf("seimi_user: %s\n", seimi_user);
+    __asm__ volatile("clac\n");
+
+    sa_free(seimi_user, 4096);
+}
+
+int test_seimi_ro(int argc, char *argv[])
+{
+    char *seimi_user, *seimi_super;
+    long offset;
+
+    // Allocate 4096 bytes of memory
+    seimi_user = sa_alloc(4096, true, &offset);
+    seimi_super = seimi_user + offset;
+    sprintf(seimi_user, "Hello, world!");
+
+    // Print the addresses of seimi_user and seimi_super
+    printf("seimi_user: %s\n", seimi_user);
+    printf("seimi_super: %s\n", seimi_super);
+    printf("offset: %lx\n", offset);
+
+    // Now, we enter VMPL mode
+    vmpl_enter(NULL, NULL);
+    printf("seimi_user[vmpl]: %p\n", seimi_user);
+    printf("seimi_super[vmpl]: %p\n", seimi_super);
+
+    // Write to seimi_user (protected)
+    __asm__ volatile("stac\n");
+    sprintf(seimi_user, "Hello, SEIMI!");
+    printf("seimi_user: %s\n", seimi_user);
+    __asm__ volatile("clac\n");
+
+    // Read from seimi_super (read-only)
+    printf("seimi_super: %s\n", seimi_super);
+
+    sa_free(seimi_user, 4096);
+
     return 0;
 }
 
@@ -837,6 +896,8 @@ void run_test(Test *test, int argc, char *argv[]) {
 
 static Test tests[] = {
     {"test_process", vmpl_process, vmpl_enter},
+    {"test_mxml", test_mxml, vmpl_enter},
+    {"test_zlib", test_zlib, vmpl_enter},
     {"test_bitmap", test_bitmap, vmpl_enter},
     {"test_hbitmap", test_hbitmap, vmpl_enter},
     {"test_bmap", test_bmap, vmpl_enter},
@@ -851,6 +912,8 @@ static Test tests[] = {
     {"test_mmap", test_mmap, vmpl_enter},
     {"test_munmap", test_munmap, vmpl_enter},
     {"test_mprotect", test_mprotect, vmpl_enter},
+    {"test_seimi", test_seimi, NULL},
+    {"test_seimi_ro", test_seimi_ro, NULL},
     {"test_sbrk", test_sbrk, vmpl_enter},
     {"test_sem", test_sem, NULL},
     {"test_semaphore", test_semaphore, NULL},

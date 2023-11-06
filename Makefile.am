@@ -14,10 +14,12 @@ benchmark_SOURCES = src/benchmark.c \
                     src/server.c src/client.c \
                     src/bench/bench_dune_ring.c \
                     src/semaphore_test.c \
+                    src/test_mxml.c \
+                    src/test_zlib.c \
                     src/test_bitmap.c
 
 benchmark_LDFLAGS = -static
-benchmark_LDADD = -L/usr/local/lib -lvmpl -lpthread
+benchmark_LDADD = -L/usr/local/lib -lvmpl -lpthread -lmxml -lz
 
 hello_SOURCES = src/hello.c
 hello_LDFLAGS = -static
