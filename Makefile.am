@@ -10,6 +10,17 @@ AM_LDFLAGS = -L/usr/local/lib
 # Specify the linker flags and the libraries
 bin_PROGRAMS = benchmark hello fork timetest test test_sandbox
 
+if USE_CHECK
+benchmark_SOURCES = src/tests.c \
+                    src/server.c src/client.c \
+                    src/bench/bench_dune_ring.c \
+                    src/semaphore_test.c \
+                    src/test_mxml.c \
+                    src/test_zlib.c \
+                    src/test_bitmap.c
+benchmark_LDFLAGS = -static
+benchmark_LDADD = -L/usr/local/lib -lvmpl -lpthread -lmxml -lz -lcheck
+else
 benchmark_SOURCES = src/benchmark.c \
                     src/server.c src/client.c \
                     src/bench/bench_dune_ring.c \
@@ -20,6 +31,7 @@ benchmark_SOURCES = src/benchmark.c \
 
 benchmark_LDFLAGS = -static
 benchmark_LDADD = -L/usr/local/lib -lvmpl -lpthread -lmxml -lz
+endif
 
 hello_SOURCES = src/hello.c
 hello_LDFLAGS = -static
