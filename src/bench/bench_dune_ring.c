@@ -30,12 +30,13 @@ static void pgflt_handler(uintptr_t addr, uint64_t fec, struct dune_tf *tf)
 	*pte |= PTE_P | PTE_W | PTE_U | PTE_A | PTE_D;
 }
 #else
-static void pgflt_handler(uintptr_t addr, uint64_t fec, struct dune_tf *tf)
+static void pgflt_handler(struct dune_tf *tf)
 {
 	// ptent_t *pte;
 
 	// dune_vm_lookup(pgroot, (void *) addr, 0, &pte);
 	// *pte |= PTE_P | PTE_W | PTE_U | PTE_A | PTE_D;
+	void *addr = read_cr2();
 
 	log_err("page fault at %p", (void *) addr);
 

@@ -37,6 +37,7 @@
 #include <vmpl/vmpl.h>  // vmpl_enter, vmpl_server, vmpl_client
 #include <vmpl/seimi.h> // sa_alloc, sa_free
 #include <vmpl/log.h> // log_init, log_set_level
+#include <vmpl/mm.h>
 
 #include "benchmark.h"
 
@@ -120,7 +121,7 @@ int test_socket(int argc, char *argv[]) {
     } else if (server_pid == 0) {
         // Child process
         bind_cpu(THREAD_1_CORE);
-        vmpl_enter(argc, argv);
+        VMPL_ENTER;
         return vmpl_server(argc, argv);
     } else {
         // Parent process
@@ -133,7 +134,7 @@ int test_socket(int argc, char *argv[]) {
         } else if (client_pid == 0) {
             // Child process
             bind_cpu(THREAD_2_CORE);
-            vmpl_enter(argc, argv);
+            VMPL_ENTER;
             return vmpl_client(argc, argv);
         } else {
             // Parent process
@@ -373,6 +374,7 @@ int test_munmap(int argc, char *argv[])
 
 int test_seimi(int argc, char *argv[])
 {
+    int cr4;
     char *seimi_user;
 
     // Allocate 4096 bytes of memory
@@ -383,8 +385,12 @@ int test_seimi(int argc, char *argv[])
     printf("seimi_user: %s\n", seimi_user);
 
     // Now, we enter VMPL mode
-    vmpl_enter(NULL, NULL);
+    VMPL_ENTER;
     printf("seimi_user[vmpl]: %p\n", seimi_user);
+
+    // Read CR4
+    cr4 = read_cr4();
+    printf("SMAP: %s\n", cr4 & CR4_SMAP ? "enabled" : "disabled");
 
     // Write to seimi_user (protected)
     __asm__ volatile("stac\n");
@@ -411,7 +417,7 @@ int test_seimi_ro(int argc, char *argv[])
     printf("offset: %lx\n", offset);
 
     // Now, we enter VMPL mode
-    vmpl_enter(NULL, NULL);
+    VMPL_ENTER;
     printf("seimi_user[vmpl]: %p\n", seimi_user);
     printf("seimi_super[vmpl]: %p\n", seimi_super);
 
@@ -459,7 +465,7 @@ sem_t sem;
 
 void* sem_thread_func(void* arg) {
     bind_cpu(THREAD_1_CORE);
-    vmpl_enter(NULL, NULL);
+    VMPL_ENTER;
     printf("Thread waiting on semaphore...\n");
     sem_wait(&sem);
     printf("Thread got semaphore!\n");
@@ -468,7 +474,7 @@ void* sem_thread_func(void* arg) {
 
 void* sem_post_func(void* arg) {
     bind_cpu(THREAD_2_CORE);
-    vmpl_enter(NULL, NULL);
+    VMPL_ENTER;
     sleep(SLEEP_TIME);
     printf("Posting to semaphore...\n");
     sem_post(&sem);
@@ -521,7 +527,7 @@ int tesh_shm(int argc, char *argv[])
     } else if (pid1 == 0) {
         // 子进程1
         bind_cpu(THREAD_1_CORE);
-        vmpl_enter(argc, argv);
+        VMPL_ENTER;
         shm = shmat(shmid, NULL, 0);
         if (shm == (char *) -1) {
             perror("shmat");
@@ -547,7 +553,7 @@ int tesh_shm(int argc, char *argv[])
     } else if (pid2 == 0) {
         // 子进程2
         bind_cpu(THREAD_2_CORE);
-        vmpl_enter(argc, argv);
+        VMPL_ENTER;
         shm = shmat(shmid, NULL, 0);
         if (shm == (char *) -1) {
             perror("shmat");
@@ -603,7 +609,7 @@ int test_msg(int argc, char *argv[])
     } else if (pid1 == 0) {
         // 子进程1
         bind_cpu(THREAD_1_CORE);
-        vmpl_enter(argc, argv);
+        VMPL_ENTER;
         if (msgrcv(msqid, &buf, MSG_SIZE, 1, 0) < 0) {
             perror("msgrcv");
             exit(1);
@@ -622,7 +628,7 @@ int test_msg(int argc, char *argv[])
     } else if (pid2 == 0) {
         // 子进程2
         bind_cpu(THREAD_2_CORE);
-        vmpl_enter(argc, argv);
+        VMPL_ENTER;
         buf.mtype = 1;
         sprintf(buf.mtext, "Hello, world!");
         if (msgsnd(msqid, &buf, sizeof(buf.mtext), IPC_NOWAIT) < 0) {
@@ -695,15 +701,20 @@ int test_vfork(int argc, char *argv[])
 
 void *thread_func(void *arg)
 {
+    int argc = *(int *)arg;
     printf("Hello from thread\n");
+    printf("argc: %d\n", argc);
     return NULL;
 }
 
 int test_pthread(int argc, char *argv[])
 {
     pthread_t thread;
+    pthread_attr_t attr;
     printf("Hello from main thread\n");
-    int ret = pthread_create(&thread, NULL, thread_func, NULL);
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+    int ret = pthread_create(&thread, &attr, thread_func, &argc);
     if (ret != 0) {
         perror("pthread_create");
         exit(EXIT_FAILURE);
@@ -746,7 +757,7 @@ static void ipi_hanlder(struct dune_tf *tf)
 static void *ipi_thread(void *arg)
 {
     // Enter VMPL mode
-    volatile int ret = vmpl_enter(NULL, NULL);
+    volatile int ret = vmpl_enter(1, NULL);
     if (ret) {
         printf("posted_ipi: failed to enter dune in thread %d\n", sched_getcpu());
 		return NULL;
@@ -816,6 +827,22 @@ int test_posted_ipi(int argc, char *argv[])
 	for (i = 0; i < NUM_THREADS; i++) {
 		pthread_join(pthreads[i], NULL);
 	}
+
+    return 0;
+}
+
+static void test_pgflt(int argc, char *argv[])
+{
+    char *addr_ro;
+    addr_ro = mmap(NULL, 4096, PROT_READ, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+
+    printf("addr_ro: %p\n", addr_ro);
+
+    VMPL_ENTER;
+
+    *addr_ro = 'a';
+
+    printf("addr_ro: %c\n", *addr_ro);
 
     return 0;
 }
@@ -927,6 +954,7 @@ static Test tests[] = {
     {"test_pthread", test_pthread, vmpl_enter},
     {"test_posted_ipi", test_posted_ipi, vmpl_enter},
     {"test_self_posted_ipi", test_self_posted_ipi, vmpl_enter},
+    {"test_pgflt", test_pgflt, NULL},
 #ifdef USE_SECCOMP
     {"test_seccomp", test_seccomp, vmpl_enter},
 #endif

@@ -29,6 +29,7 @@
 #include <semaphore.h>
 #include <vmpl/sys.h> // read_cr0, read_cr2, read_cr3, read_cr4, read_rflags, rdmsr
 #include <vmpl/apic.h>
+#include <vmpl/mm.h>
 #include <vmpl/vmpl.h>  // vmpl_enter, vmpl_server, vmpl_client
 #include <vmpl/seimi.h> // sa_alloc, sa_free
 #include <vmpl/log.h> // log_init, log_set_level
@@ -849,6 +850,31 @@ START_TEST(test_posted_ipi)
 		pthread_join(pthreads[i], NULL);
 	}
 
+}
+END_TEST
+
+static void pgflt_handler(struct dune_tf *tf)
+{
+    int rc, level;
+	uint64_t cr2 = read_cr2();
+	uint64_t pa;
+	log_warn("dune: page fault at 0x%016lx, error-code = %x", cr2, tf->err);
+	rc = lookup_address(cr2, &level, &pa);
+	if (rc != 0) {
+		log_err("dune: page fault at unmapped addr 0x%016lx", cr2);
+	} else {
+		log_warn("dune: page fault at mapped addr 0x%016lx", cr2);
+	}
+}
+
+START_TEST(test_pgflt)
+{
+    char *addr_ro;
+    addr_ro = mmap(NULL, 4096, PROT_READ, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    VMPL_ENTER;
+
+    dune_register_pgflt_handler(pgflt_handler);
+    *addr_ro = 1;
 }
 END_TEST
 
