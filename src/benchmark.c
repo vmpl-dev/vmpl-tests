@@ -971,6 +971,7 @@ struct test_args {
     int list_tests;
     int show_help;
     int show_maps;
+    int show_time;
     int log_level;
 };
 
@@ -991,6 +992,7 @@ static struct argp_option options[] = {
     {"list-tests", 'l', 0, 0, "List all tests", 1},
     {"help", 'h', 0, 0, "Show help", 1},
     {"show-maps", 'm', 0, 0, "Show /proc/self/maps", 1},
+    {"show-time", 's', 0, 0, "Show time", 1},
     {"log-level", 'v', "LOG_LEVEL", 0, "Set log level", 1},
     {0}
 };
@@ -1014,6 +1016,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
         case 'm':
             args->show_maps = 1;
             break;
+        case 's':
+            args->show_time = 1;
+            break;
         case 'v':
             args->log_level = atoi(arg);
             break;
@@ -1034,12 +1039,12 @@ static int parse_args(int argc, char *argv[], struct test_args *args) {
 }
 #else
 static void usage(const char *program_name) {
-    printf("Usage: %s [-a] [-t test_name] [-l] [-h] [-m] [-v log_level]\n", program_name);
+    printf("Usage: %s [-a] [-t test_name] [-l] [-h] [-m] [-s] [-v log_level]\n", program_name);
 }
 
 static int parse_args(int argc, char *argv[], struct test_args *args) {
     int opt;
-    while ((opt = getopt(argc, argv, "alt:hmv:")) != -1) {
+    while ((opt = getopt(argc, argv, "alt:hmsv:")) != -1) {
         switch (opt) {
             case 'a':
                 args->run_all = 1;
@@ -1055,6 +1060,9 @@ static int parse_args(int argc, char *argv[], struct test_args *args) {
                 break;
             case 'm':
                 args->show_maps = 1;
+                break;
+            case 's':
+                args->show_time = 1;
                 break;
             case 'v':
                 args->log_level = atoi(optarg);
@@ -1077,6 +1085,7 @@ int main(int argc, char** argv)
         .list_tests = 0,
         .show_help = 0,
         .show_maps = 0,
+        .show_time = 0,
         .log_level = LOG_LEVEL_INFO,
     };
     
@@ -1090,6 +1099,10 @@ int main(int argc, char** argv)
     } else {
         printf("Invalid log level %d\n", args.log_level);
         return 1;
+    }
+
+    if (args.show_time) {
+        set_show_time(true);
     }
 
     if (args.show_help) {
