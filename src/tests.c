@@ -525,6 +525,43 @@ START_TEST(test_sem)
 }
 END_TEST
 
+START_TEST(test_pipe)
+{
+    int pipefd[2];
+    pid_t cpid;
+    char buf;
+
+    if (pipe(pipefd) == -1) {
+        perror("pipe");
+        exit(EXIT_FAILURE);
+    }
+
+    cpid = fork();
+    if (cpid == -1) {
+        perror("fork");
+        exit(EXIT_FAILURE);
+    }
+
+    if (cpid == 0) {    /* Child reads from pipe */
+        close(pipefd[1]);          /* Close unused write end */
+
+        while (read(pipefd[0], &buf, 1) > 0)
+            write(STDOUT_FILENO, &buf, 1);
+
+        write(STDOUT_FILENO, "\n", 1);
+        close(pipefd[0]);
+        _exit(EXIT_SUCCESS);
+
+    } else {            /* Parent writes argv[1] to pipe */
+        close(pipefd[0]);          /* Close unused read end */
+        write(pipefd[1], "test", 4);
+        close(pipefd[1]);          /* Reader will see EOF */
+        wait(NULL);                /* Wait for child */
+        exit(EXIT_SUCCESS);
+    }
+}
+END_TEST
+
 #define SHM_SIZE 1024
 
 START_TEST(test_shm)
@@ -1080,6 +1117,7 @@ Suite *ipc_suite(void)
 
     tcase_add_test(tc_core, test_signal);
     tcase_add_test(tc_core, test_socket);
+    tcase_add_test(tc_core, test_pipe);
     tcase_add_test(tc_core, test_shm);
     tcase_add_test(tc_core, test_sem);
     tcase_add_test(tc_core, test_msg);
