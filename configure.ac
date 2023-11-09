@@ -6,8 +6,8 @@ AM_SILENT_RULES([yes])
 AC_PROG_CC([musl-gcc])
 AC_PROG_CXX([musl-g++])
 AC_PROG_INSTALL
-AC_PROG_RANLIB
 
+LT_INIT([static, shared])
 AC_CONFIG_HEADERS([include/config.h])
 AC_CONFIG_SRCDIR([src])
 AC_CONFIG_FILES([Makefile])

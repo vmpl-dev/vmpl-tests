@@ -4,7 +4,7 @@ ACLOCAL_AMFLAGS = -I m4
 # Specify the include directories for vmpl library
 AM_CPPFLAGS = -I$(top_srcdir)/include
 AM_CFLAGS = -Wall -g -MD -O2 -z noexecstack
-AM_LDFLAGS = -L/usr/local/lib
+AM_LDFLAGS =
 
 # Specify the target and source files for the myapp project
 # Specify the linker flags and the libraries
@@ -18,8 +18,8 @@ benchmark_SOURCES = src/tests.c \
                     src/test_mxml.c \
                     src/test_zlib.c \
                     src/test_bitmap.c
-benchmark_LDFLAGS = -static
-benchmark_LDADD = -L/usr/local/lib -lvmpl -lpthread -lmxml -lz -lcheck
+benchmark_LDFLAGS = 
+benchmark_LDADD = -lvmpl -lpthread -lmxml -lz -lcheck
 else
 benchmark_SOURCES = src/benchmark.c \
                     src/server.c src/client.c \
@@ -29,25 +29,25 @@ benchmark_SOURCES = src/benchmark.c \
                     src/test_zlib.c \
                     src/test_bitmap.c
 
-benchmark_LDFLAGS = -static
-benchmark_LDADD = -L/usr/local/lib -lvmpl -lpthread -lmxml -lz
+benchmark_LDFLAGS = 
+benchmark_LDADD = -lvmpl -lpthread -lmxml -lz
 endif
 
 hello_SOURCES = src/hello.c
-hello_LDFLAGS = -static
-hello_LDADD = -L/usr/local/lib -lvmpl
+hello_LDFLAGS = 
+hello_LDADD = -lvmpl
 
 fork_SOURCES = src/fork.c
-fork_LDFLAGS = -static
-fork_LDADD = -L/usr/local/lib -lvmpl -lpthread
+fork_LDFLAGS = 
+fork_LDADD = -lvmpl -lpthread
 
 timetest_SOURCES = src/timetest.c
-timetest_LDFLAGS = -static
-timetest_LDADD = -L/usr/local/lib -lvmpl -lpthread
+timetest_LDFLAGS = 
+timetest_LDADD = -lvmpl -lpthread
 
 test_SOURCES = src/test.c
-test_LDFLAGS = -static
-test_LDADD = -L/usr/local/lib -lvmpl -lpthread
+test_LDFLAGS = 
+test_LDADD = -lvmpl -lpthread
 
 test_sandbox_SOURCES = src/test_sandbox.c
-test_sandbox_LDFLAGS = -static -pthread
+test_sandbox_LDFLAGS =  -pthread
