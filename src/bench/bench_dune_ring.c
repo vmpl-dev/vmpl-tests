@@ -165,15 +165,13 @@ int bench_dune_ring(int argc, char *argv[])
 {
 	int ret;
 
-#ifdef LIBDUNE
 	ret = dune_init_and_enter();
 	if (ret) {
 		printf("failed to initialize DUNE\n");
 		return ret;
 	}
-#endif
 
-	// test_pgflt();
+	test_pgflt();
 	test_syscall();
 
 	return 0;

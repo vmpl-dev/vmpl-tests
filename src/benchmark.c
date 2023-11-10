@@ -11,7 +11,6 @@
 #include <assert.h> // assert
 #include <fcntl.h> // open
 #include <signal.h> // signal
-#include <syscall.h> // SYS_clock_gettime
 #include <sys/mman.h> // mmap
 #include <sys/prctl.h> // arch_prctl
 #include <sys/types.h> // open
@@ -49,15 +48,6 @@ typedef struct {
     Func prolog;
 } Test;
 
-static char line[1024];
-
-static uint64_t get_time(void)
-{
-    struct timespec ts;
-    syscall(SYS_clock_gettime, CLOCK_MONOTONIC_RAW, &ts);
-    return (uint64_t)ts.tv_sec * 1000000000 + ts.tv_nsec;
-}
-
 int bind_cpu(int cpu)
 {
     cpu_set_t mask;
@@ -82,6 +72,7 @@ int vmpl_process(int argc, char *argv[])
     printf("vmpl-process: hello world!\n");
 
     int fd;
+    static char line[1024];
     ssize_t num_read;
     fd = open("/proc/self/maps", O_RDONLY, 0);
     if (fd == -1) {
@@ -312,17 +303,6 @@ int test_time(int argc, char *argv[])
     uint64_t end_time;
     uint64_t total_time = 0;
 
-#ifdef CONFIG_VMPL_VDSO
-    start_time = get_time();
-    for (int i = 0; i < NUM_ITERATIONS; i++) {
-        pid = getpid();
-    }
-    end_time = get_time();
-    total_time = end_time - start_time;
-
-
-    printf("Elapsed time: %lu ns\n", end_time - start_time);
-#else
     start_time = rdtsc();
     for (int i = 0; i < NUM_ITERATIONS; i++)
     {
@@ -332,7 +312,6 @@ int test_time(int argc, char *argv[])
     total_time = end_time - start_time;
 
     printf("Average time: %lu cycles\n", total_time / NUM_ITERATIONS);
-#endif
     return 0;
 }
 
@@ -399,6 +378,7 @@ int test_seimi(int argc, char *argv[])
     __asm__ volatile("clac\n");
 
     sa_free(seimi_user, 4096);
+    return 0;
 }
 
 int test_seimi_ro(int argc, char *argv[])
@@ -519,6 +499,7 @@ int test_pipe() {
     }
 
     if (cpid == 0) {    /* Child reads from pipe */
+        VMPL_ENTER;
         close(pipefd[1]);          /* Close unused write end */
 
         while (read(pipefd[0], &buf, 1) > 0)
@@ -529,6 +510,7 @@ int test_pipe() {
         _exit(EXIT_SUCCESS);
 
     } else {            /* Parent writes argv[1] to pipe */
+        VMPL_ENTER;
         close(pipefd[0]);          /* Close unused read end */
         write(pipefd[1], "test", 4);
         close(pipefd[1]);          /* Reader will see EOF */
@@ -866,7 +848,7 @@ int test_posted_ipi(int argc, char *argv[])
     return 0;
 }
 
-static void test_pgflt(int argc, char *argv[])
+static int test_pgflt(int argc, char *argv[])
 {
     char *addr_ro;
     addr_ro = mmap(NULL, 4096, PROT_READ, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -996,7 +978,7 @@ static Test tests[] = {
 #endif
     {"vmpl_server", vmpl_server, vmpl_enter},
     {"vmpl_client", vmpl_client, vmpl_enter},
-    {"bench_dune_ring", bench_dune_ring, vmpl_enter},
+    {"bench_dune_ring", bench_dune_ring, NULL},
 };
 
 #define num_tests (sizeof(tests) / sizeof(Test))

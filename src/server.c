@@ -7,7 +7,7 @@
 
 #include "benchmark.h"
 
-int vmpl_server(int argc, char const *argv[])
+int vmpl_server(int argc, char *argv[])
 {
     int server_fd, new_socket, valread;
     struct sockaddr_in address;

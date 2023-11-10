@@ -6,7 +6,7 @@ extern "C" {
 #include <time.h>
 
 #define CLOCK_MONOTONIC_RAW 4
-#define NUM_ITERATIONS 1000
+#define NUM_ITERATIONS 1000000
 
 #define COLOR_RED     "\x1b[31m"
 #define COLOR_GREEN   "\x1b[32m"
@@ -27,13 +27,13 @@ extern "C" {
 #define NUM_THREADS 3
 #define TEST_VECTOR 0xF2
 
-extern int vmpl_server(int argc, char const *argv[]);
-extern int vmpl_client(int argc, char const *argv[]);
-extern int bench_dune_ring(int argc, char const *argv[]);
+extern int vmpl_server(int argc, char *argv[]);
+extern int vmpl_client(int argc, char *argv[]);
+extern int bench_dune_ring(int argc, char *argv[]);
 extern int test_semaphore(int argc, char *argv[]);
-extern int test_bitmap(int argc, char const *argv[]);
-extern int test_hbitmap(int argc, char const *argv[]);
-extern int test_bmap(int argc, char const *argv[]);
+extern int test_bitmap(int argc, char *argv[]);
+extern int test_hbitmap(int argc, char *argv[]);
+extern int test_bmap(int argc, char *argv[]);
 extern int test_mxml(int argc, char *argv[]);
 extern int test_zlib(int argc, char *argv[]);
 

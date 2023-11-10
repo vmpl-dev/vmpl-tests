@@ -8,7 +8,7 @@
 
 #include "benchmark.h"
 
-int vmpl_client(int argc, char const *argv[])
+int vmpl_client(int argc, char *argv[])
 {
     int sock = 0, valread;
     struct sockaddr_in serv_addr;

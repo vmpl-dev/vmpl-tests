@@ -8,7 +8,7 @@
 
 #define BITMAP_SIZE 64
 
-int test_bitmap(int argc, char const *argv[]) {
+int test_bitmap(int argc, char *argv[]) {
     size_t bitmap_size = 128;  // 可以设置为任意大小
     bitmap *b = bitmap_alloc(bitmap_size);
 
@@ -42,7 +42,7 @@ int test_bitmap(int argc, char const *argv[]) {
     return 0;
 }
 
-int test_hbitmap(int argc, char const *argv[]) {
+int test_hbitmap(int argc, char *argv[]) {
     size_t hbitmap_size = 128;  // 可以设置为任意大小
     hbitmap *hb = hbitmap_alloc(hbitmap_size);
 
@@ -76,7 +76,7 @@ int test_hbitmap(int argc, char const *argv[]) {
     return 0;
 }
 
-int test_bmap(int argc, char const *argv[]) {
+int test_bmap(int argc, char *argv[]) {
     size_t bmap_size = 128;  // 可以设置为任意大小
     bmap *bm = bmap_alloc(bmap_size, BITMAP_TYPE_HIERARCHICAL);
 

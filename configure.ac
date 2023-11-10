@@ -7,7 +7,7 @@ AC_PROG_CC([musl-gcc])
 AC_PROG_CXX([musl-g++])
 AC_PROG_INSTALL
 
-LT_INIT([static, shared])
+AC_PROG_RANLIB
 AC_CONFIG_HEADERS([include/config.h])
 AC_CONFIG_SRCDIR([src])
 AC_CONFIG_FILES([Makefile])
