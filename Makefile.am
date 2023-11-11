@@ -10,27 +10,32 @@ AM_LDFLAGS = -static
 # Specify the linker flags and the libraries
 bin_PROGRAMS = benchmark hello fork timetest test test_sandbox
 
-if USE_CHECK
-benchmark_SOURCES = src/tests.c \
-                    src/server.c src/client.c \
+benchmark_SOURCES = src/server.c src/client.c \
                     src/bench/bench_dune_ring.c \
                     src/semaphore_test.c \
-                    src/test_mxml.c \
-                    src/test_zlib.c \
                     src/test_bitmap.c
 benchmark_LDFLAGS = -static
-benchmark_LDADD = -lvmpl -lpthread -lmxml -lz -lcheck
-else
-benchmark_SOURCES = src/benchmark.c \
-                    src/server.c src/client.c \
-                    src/bench/bench_dune_ring.c \
-                    src/semaphore_test.c \
-                    src/test_mxml.c \
-                    src/test_zlib.c \
-                    src/test_bitmap.c
+benchmark_LDADD = -lvmpl -lpthread -lz
 
-benchmark_LDFLAGS = -static
-benchmark_LDADD = -lvmpl -lpthread -lmxml -lz
+if USE_CHECK
+benchmark_SOURCES += src/tests.c
+benchmark_LDADD += -lcheck
+else
+benchmark_SOURCES += src/benchmark.c
+endif
+
+if USE_ZLIB
+benchmark_SOURCES += src/test_zlib.c
+benchmark_LDADD += -lz
+endif
+
+if USE_MXML
+benchmark_SOURCES += src/test_mxml.c
+benchmark_LDADD += -lmxml
+endif
+
+if USE_SECCOMP
+benchmark_LDADD += -lseccomp
 endif
 
 hello_SOURCES = src/hello.c

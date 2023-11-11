@@ -19,7 +19,7 @@
 #include <time.h> // time
 #include <pthread.h> // pthread_create, pthread_join
 #include <sched.h>
-#ifdef USE_SECCOMP
+#ifdef HAVE_SECCOMP
 #include <seccomp.h> /* libseccomp */
 #endif
 #ifdef __GLIBC__
@@ -864,7 +864,8 @@ static int test_pgflt(int argc, char *argv[])
     return 0;
 }
 
-#ifdef USE_SECCOMP
+#ifdef HAVE_SECCOMP
+#include <seccomp.h>
 int test_seccomp(int argc, char *argv[])
 {
     printf("step 1: unrestricted\n");
@@ -973,7 +974,7 @@ static Test tests[] = {
     {"test_posted_ipi", test_posted_ipi, vmpl_enter},
     {"test_self_posted_ipi", test_self_posted_ipi, vmpl_enter},
     {"test_pgflt", test_pgflt, NULL},
-#ifdef USE_SECCOMP
+#ifdef HAVE_SECCOMP
     {"test_seccomp", test_seccomp, vmpl_enter},
 #endif
     {"vmpl_server", vmpl_server, vmpl_enter},
