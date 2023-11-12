@@ -525,7 +525,7 @@ int tesh_shm(int argc, char *argv[])
 {
     int shmid;
     key_t key;
-    char *shm, *s;
+    char *shm;
     pid_t pid1, pid2;
 
     // 创建共享内存
@@ -552,10 +552,8 @@ int tesh_shm(int argc, char *argv[])
         }
         printf("shm: %p\n", shm);
         printf("Write to shm\n");
-        for (s = shm; *s != '\0'; s++)
-            putchar(*s);
-        putchar('\n');
-        *shm = '*';
+        sprintf(shm, "Hello, world!");
+        printf("shm: %s\n", shm);
         shmdt(shm);
         exit(0);
     }
@@ -578,10 +576,7 @@ int tesh_shm(int argc, char *argv[])
         }
         printf("shm: %p\n", shm);
         printf("Read from shm\n");
-        for (s = shm; *s != '\0'; s++)
-            putchar(*s);
-        putchar('\n');
-        *shm = '#';
+        printf("shm: %s\n", shm);
         shmdt(shm);
         exit(0);
     }

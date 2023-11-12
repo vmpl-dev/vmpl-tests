@@ -45,12 +45,17 @@ scp redis.conf amd-guest:~/redis.conf
 sudo rsync -avzP benshan@super-server:/usr/local/musl/ /usr/local/musl/
 ```
 
-### 启动redis server on VM
+### 启动redis server on VM (vmpl disabled)
 ```bash
 # 启动redis
 redis-server ~/redis.conf
 # 连接redis
 redis-cli
+```
+
+### 启动redis server on VM (vmpl enabled)
+```bash
+$ sudo ./run-app.sh --dunify ./dunify.so --run /usr/local/musl/bin/redis-server ./redis.conf
 ```
 
 ### 测试redis server
