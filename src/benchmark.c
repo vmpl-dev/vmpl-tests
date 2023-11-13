@@ -11,6 +11,7 @@
 #include <assert.h> // assert
 #include <fcntl.h> // open
 #include <signal.h> // signal
+#include <syscall.h> // SYS_clock_gettime
 #include <sys/mman.h> // mmap
 #include <sys/prctl.h> // arch_prctl
 #include <sys/types.h> // open
@@ -19,34 +20,30 @@
 #include <time.h> // time
 #include <pthread.h> // pthread_create, pthread_join
 #include <sched.h>
-#ifdef HAVE_SECCOMP
-#include <seccomp.h> /* libseccomp */
-#endif
-#ifdef __GLIBC__
 #include <sys/ipc.h> // shmget, shmctl, ftok, IPC_CREAT 
 #include <sys/sem.h> // semget, semctl, semop
 #include <sys/shm.h> // shmget, shmctl, shmat, shmdt
-#else
 #include <sys/msg.h>
 #include <sys/wait.h> // waitpid, WIFEXITED, WEXITSTATUS, WTERMSIG
 #include <semaphore.h>
-#endif
 #include <vmpl/sys.h> // read_cr0, read_cr2, read_cr3, read_cr4, read_rflags, rdmsr
 #include <vmpl/apic.h>
+#include <vmpl/mm.h>
 #include <vmpl/vmpl.h>  // vmpl_enter, vmpl_server, vmpl_client
 #include <vmpl/seimi.h> // sa_alloc, sa_free
 #include <vmpl/log.h> // log_init, log_set_level
-#include <vmpl/mm.h>
 
+#include "config.h"
 #include "benchmark.h"
 
-typedef int (*Func)(int argc, char *argv[]);
+static char line[1024];
 
-typedef struct {
-    const char *name;
-    Func exec_func;
-    Func prolog;
-} Test;
+static uint64_t get_time(void)
+{
+    struct timespec ts;
+    syscall(SYS_clock_gettime, CLOCK_MONOTONIC_RAW, &ts);
+    return (uint64_t)ts.tv_sec * 1000000000 + ts.tv_nsec;
+}
 
 int bind_cpu(int cpu)
 {
@@ -55,8 +52,9 @@ int bind_cpu(int cpu)
     CPU_SET(cpu, &mask);
     if (sched_setaffinity(0, sizeof(mask), &mask) == -1) {
         perror("sched_setaffinity");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
+
     // rest of your code
     return 0;
 }
@@ -64,15 +62,14 @@ int bind_cpu(int cpu)
 void handle_sigint(int sig)
 {
     printf("Caught signal %d\n", sig);
-  	exit(0);
+    exit(EXIT_SUCCESS);
 }
 
-int vmpl_process(int argc, char *argv[])
+START_TEST(test_process)
 {
     printf("vmpl-process: hello world!\n");
 
     int fd;
-    static char line[1024];
     ssize_t num_read;
     fd = open("/proc/self/maps", O_RDONLY, 0);
     if (fd == -1) {
@@ -97,14 +94,12 @@ int vmpl_process(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    printf("vmpl-process: num-args = %d\n", argc);
-
-    exit(EXIT_SUCCESS);
-
-    return 0;
+    printf("vmpl-process exiting\n");
 }
+END_TEST
 
-int test_socket(int argc, char *argv[]) {
+START_TEST(test_socket)
+{
     pid_t server_pid = fork();
     if (server_pid == -1) {
         perror("fork");
@@ -113,7 +108,7 @@ int test_socket(int argc, char *argv[]) {
         // Child process
         bind_cpu(THREAD_1_CORE);
         VMPL_ENTER;
-        return vmpl_server(argc, argv);
+        vmpl_server(1, NULL);
     } else {
         // Parent process
         sleep(SLEEP_TIME); // Wait for server to start
@@ -126,7 +121,7 @@ int test_socket(int argc, char *argv[]) {
             // Child process
             bind_cpu(THREAD_2_CORE);
             VMPL_ENTER;
-            return vmpl_client(argc, argv);
+            vmpl_client(1, NULL);
         } else {
             // Parent process
             int status;
@@ -144,26 +139,19 @@ int test_socket(int argc, char *argv[]) {
             }
         }
     }
-
-    return 0;
 }
+END_TEST
 
-int test_sys(int argc, char *argv[])
+START_TEST(test_sys)
 {
-    printf("vmpl-process: hello world!\n");
-
-    size_t cr0, cr2, cr3, cr4, efer, rflags;
-    cr0 = read_cr0();
-    cr2 = read_cr2();
-    cr3 = read_cr3();
-    cr4 = read_cr4();
-    efer = rdmsr(MSR_EFER);
-    rflags = read_rflags();
-    printf("vmpl-process: cr0 = 0x%lx, cr2 = 0x%lx, cr3 = 0x%lx\n", cr0, cr2, cr3);
-    printf("vmpl-process: cr4 = 0x%lx, efer = 0x%lx, rflags = 0x%lx\n", cr4, efer, rflags);
-
-    return 0;
+    printf("cr0: 0x%lx\n", read_cr0());
+    printf("cr2: 0x%lx\n", read_cr2());
+    printf("cr3: 0x%lx\n", read_cr3());
+    printf("cr4: 0x%lx\n", read_cr4());
+    printf("efer: 0x%lx\n", rdmsr(MSR_EFER));
+    printf("rflags: 0x%lx\n", read_rflags());
 }
+END_TEST
 
 static void vc_handler(struct dune_tf *tf)
 {
@@ -171,7 +159,7 @@ static void vc_handler(struct dune_tf *tf)
     exit(EXIT_SUCCESS);
 }
 
-int test_cpuid(int argc, char *argv[])
+START_TEST(test_cpuid)
 {
     unsigned int eax, ebx, ecx, edx;
 
@@ -186,100 +174,65 @@ int test_cpuid(int argc, char *argv[])
 
     printf("Physical address size: %u bits\n", eax & 0xFF);
     printf("Virtual address size: %u bits\n", (eax >> 8) & 0xFF);
-
-    return 0;
 }
+END_TEST
 
-int test_vsyscall(int argc, char *argv[])
-{
+START_TEST(test_vsyscall)
     struct timeval tv;
     struct timezone tz;
-    time_t t;
 
     /* 测试 gettimeofday 函数 */
-    printf("test gettimeofday\n");
-    if (gettimeofday(&tv, &tz) == 0)
-        printf("gettimeofday: %ld.%06ld\n", (long)tv.tv_sec, (long)tv.tv_usec);
-    else
-        perror("gettimeofday");
+    ck_assert_int_ne(gettimeofday(&tv, &tz), 0);
 
     /* 测试 time 函数 */
-    printf("test time\n");
-    t = time(NULL);
-    if (t != (time_t)-1)
-        printf("time: %ld\n", (long)t);
-    else
-        perror("time");
+    ck_assert_int_ne(time(NULL), -1);
+END_TEST
 
-    return 0;
-}
-
-int test_vdso(int argc, char *argv[])
-{
-    printf("hello\n");
+START_TEST(test_vdso)
     int a = getpid();
-    int b;
-    while ((b = getpid()) == a) {
-        printf("continue\n");
-    }
-    printf("we failed  %d %d\n", a, b);
-    return 0;
-}
+    int b = getpid();
+    ck_assert_int_eq(a, b);
+END_TEST
 
-int test_signal(int argc, char *argv[])
+START_TEST(test_signal)
 {
     signal(SIGINT, handle_sigint);
-
-    while (true);
-
-    return 0;
 }
+END_TEST
 
-int test_debug(int argc, char *argv[])
+START_TEST(test_debug)
 {
     // 读取DR0-DR7的值并打印
-    printf("DR0: 0x%lx\n", read_dr(0));
-    printf("DR1: 0x%lx\n", read_dr(1));
-    printf("DR2: 0x%lx\n", read_dr(2));
-    printf("DR3: 0x%lx\n", read_dr(3));
-    printf("DR6: 0x%lx\n", read_dr(6));
-    printf("DR7: 0x%lx\n", read_dr(7));
-
-    return 0;
+    printf("dr0: 0x%lx\n", read_dr(0));
+    printf("dr1: 0x%lx\n", read_dr(1));
+    printf("dr2: 0x%lx\n", read_dr(2));
+    printf("dr3: 0x%lx\n", read_dr(3));
+    printf("dr6: 0x%lx\n", read_dr(6));
+    printf("dr7: 0x%lx\n", read_dr(7));
 }
+END_TEST
 
-int test_prctl(int argc, char *argv[])
-{
+START_TEST(test_prctl)
+    int ret_fs, ret_gs;
     unsigned long fs_reg_value;
     unsigned long gs_reg_value;
 
-    int ret_fs = arch_prctl(ARCH_GET_FS, &fs_reg_value);
-    int ret_gs = arch_prctl(ARCH_GET_GS, &gs_reg_value);
+    ret_fs = arch_prctl(ARCH_GET_FS, &fs_reg_value);
+    ck_assert_int_eq(ret_fs, 0);
+    ck_assert_int_ne(fs_reg_value, 0);
+    ret_gs = arch_prctl(ARCH_GET_GS, &gs_reg_value);
 
-    if (ret_fs == 0) {
-        printf("FS segment register value: 0x%lx\n", fs_reg_value);
-    } else {
-        printf("Failed to get FS segment register value\n");
-    }
+    ck_assert_int_eq(ret_gs, 0);
+    ck_assert_int_ne(gs_reg_value, 0);
+END_TEST
 
-    if (ret_gs == 0) {
-        printf("GS segment register value: 0x%lx\n", gs_reg_value);
-    } else {
-        printf("Failed to get GS segment register value\n");
-    }
-
-    return 0;
-}
-
-int test_syscall(int argc, char *argv[])
-{
+START_TEST(test_syscall)
     int fd = open("/dev/zero", O_RDONLY);
-    printf("fd: %d\n", fd);
+    ck_assert_int_ne(fd, -1);
     close(fd);
-    return 0;
-}
+END_TEST
 
-int test_rdtsc(int argc, char *argv[])
+START_TEST(test_rdtsc)
 {
 	uint64_t overhead = ~0UL;
 	int i;
@@ -293,15 +246,58 @@ int test_rdtsc(int argc, char *argv[])
 	}
 
     printf("rdtsc overhead: %lu cycles\n", overhead);
-	return 0;
 }
+END_TEST
 
-int test_time(int argc, char *argv[])
+START_TEST(test_time_vdso)
+{
+    uint64_t start_time, end_time;
+    uint64_t total_time = 0;
+
+    start_time = get_time();
+    for (int i = 0; i < NUM_ITERATIONS; i++) {
+        time(NULL);
+    }
+    end_time = get_time();
+    total_time = end_time - start_time;
+
+    printf("Elapsed time: %lu ns\n", total_time);
+}
+END_TEST
+
+START_TEST(test_time_syscall)
+{
+    uint64_t start_time, end_time;
+    uint64_t total_time = 0;
+
+    start_time = get_time();
+    for (int i = 0; i < NUM_ITERATIONS; i++) {
+        syscall(SYS_time, NULL);
+    }
+    end_time = get_time();
+    total_time = end_time - start_time;
+
+    printf("Elapsed time: %lu ns\n", total_time);
+
+}
+END_TEST
+
+START_TEST(test_time)
 {
     pid_t pid;
     uint64_t start_time;
     uint64_t end_time;
     uint64_t total_time = 0;
+
+    start_time = get_time();
+    for (int i = 0; i < NUM_ITERATIONS; i++) {
+        pid = getpid();
+    }
+    end_time = get_time();
+    total_time = end_time - start_time;
+
+
+    printf("Elapsed time: %lu ns\n", total_time);
 
     start_time = rdtsc();
     for (int i = 0; i < NUM_ITERATIONS; i++)
@@ -312,48 +308,45 @@ int test_time(int argc, char *argv[])
     total_time = end_time - start_time;
 
     printf("Average time: %lu cycles\n", total_time / NUM_ITERATIONS);
-    return 0;
 }
+END_TEST
 
-int test_mmap(int argc, char *argv[])
+START_TEST(test_mmap)
 {
     int fd = open("/dev/zero", O_RDONLY);
     void *addr = mmap(NULL, 4096, PROT_READ, MAP_PRIVATE, fd, 0);
     if (addr == MAP_FAILED) {
         perror("mmap");
         close(fd);
-        exit(EXIT_FAILURE);
     } else {
         printf("mmap: %p\n", addr);
         close(fd);
-        exit(EXIT_SUCCESS);
     }
-    return 0;
 }
+END_TEST
 
-int test_mprotect(int argc, char *argv[])
+START_TEST(test_mprotect)
 {
     int fd = open("/dev/zero", O_RDONLY);
     void *addr = mmap(NULL, 4096, PROT_READ, MAP_PRIVATE, fd, 0);
     printf("addr: %p\n", addr);
     mprotect(addr, 4096, PROT_READ | PROT_WRITE);
     close(fd);
-    return 0;
 }
+END_TEST
 
-int test_munmap(int argc, char *argv[])
+START_TEST(test_munmap)
 {
     int fd = open("/dev/zero", O_RDONLY);
     void *addr = mmap(NULL, 4096, PROT_READ, MAP_PRIVATE, fd, 0);
     printf("addr: %p\n", addr);
     munmap(addr, 4096);
     close(fd);
-    return 0;
 }
+END_TEST
 
-int test_seimi(int argc, char *argv[])
+START_TEST(test_seimi)
 {
-    int cr4;
     char *seimi_user;
 
     // Allocate 4096 bytes of memory
@@ -364,12 +357,7 @@ int test_seimi(int argc, char *argv[])
     printf("seimi_user: %s\n", seimi_user);
 
     // Now, we enter VMPL mode
-    VMPL_ENTER;
     printf("seimi_user[vmpl]: %p\n", seimi_user);
-
-    // Read CR4
-    cr4 = read_cr4();
-    printf("SMAP: %s\n", cr4 & CR4_SMAP ? "enabled" : "disabled");
 
     // Write to seimi_user (protected)
     __asm__ volatile("stac\n");
@@ -378,10 +366,10 @@ int test_seimi(int argc, char *argv[])
     __asm__ volatile("clac\n");
 
     sa_free(seimi_user, 4096);
-    return 0;
 }
+END_TEST
 
-int test_seimi_ro(int argc, char *argv[])
+START_TEST(test_seimi_ro)
 {
     char *seimi_user, *seimi_super;
     long offset;
@@ -397,7 +385,6 @@ int test_seimi_ro(int argc, char *argv[])
     printf("offset: %lx\n", offset);
 
     // Now, we enter VMPL mode
-    VMPL_ENTER;
     printf("seimi_user[vmpl]: %p\n", seimi_user);
     printf("seimi_super[vmpl]: %p\n", seimi_super);
 
@@ -412,34 +399,29 @@ int test_seimi_ro(int argc, char *argv[])
 
     sa_free(seimi_user, 4096);
 
-    return 0;
 }
+END_TEST
 
-int test_sbrk() {
+START_TEST(test_sbrk)
+{
     void *cur_brk, *tmp_brk = NULL;
 
     printf("The original program break: %p\n", sbrk(0));
 
     tmp_brk = sbrk(4096);
-    if (tmp_brk == (void *)-1) {
-        printf("ERROR: sbrk failed. Exiting...\n");
-        return -1;
-    }
+    ck_assert_ptr_ne(tmp_brk, (void *)-1);
 
     cur_brk = sbrk(0);
     printf("The program break after incrementing: %p\n", cur_brk);
 
     tmp_brk = sbrk(-4096);
-    if (tmp_brk == (void *)-1) {
-        printf("ERROR: sbrk failed. Exiting...\n");
-        return -1;
-    }
+    ck_assert_ptr_ne(tmp_brk, (void *)-1);
 
     cur_brk = sbrk(0);
     printf("The program break after decrementing: %p\n", cur_brk);
 
-    return 0;
 }
+END_TEST
 
 sem_t sem;
 
@@ -461,7 +443,8 @@ void* sem_post_func(void* arg) {
     return NULL;
 }
 
-int test_sem(void) {
+START_TEST(test_sem)
+{
     pthread_t thread1, thread2;
 
     printf("Initializing semaphore...\n");
@@ -479,10 +462,11 @@ int test_sem(void) {
     sem_destroy(&sem);
 
     printf("Done!\n");
-    return 0;
 }
+END_TEST
 
-int test_pipe() {
+START_TEST(test_pipe)
+{
     int pipefd[2];
     pid_t cpid;
     char buf;
@@ -499,7 +483,6 @@ int test_pipe() {
     }
 
     if (cpid == 0) {    /* Child reads from pipe */
-        VMPL_ENTER;
         close(pipefd[1]);          /* Close unused write end */
 
         while (read(pipefd[0], &buf, 1) > 0)
@@ -510,7 +493,6 @@ int test_pipe() {
         _exit(EXIT_SUCCESS);
 
     } else {            /* Parent writes argv[1] to pipe */
-        VMPL_ENTER;
         close(pipefd[0]);          /* Close unused read end */
         write(pipefd[1], "test", 4);
         close(pipefd[1]);          /* Reader will see EOF */
@@ -518,15 +500,16 @@ int test_pipe() {
         exit(EXIT_SUCCESS);
     }
 }
+END_TEST
 
 #define SHM_SIZE 1024
 
-int tesh_shm(int argc, char *argv[])
+START_TEST(test_shm)
 {
     int shmid;
     key_t key;
-    char *shm;
     pid_t pid1, pid2;
+    char *shm;
 
     // 创建共享内存
     key = ftok(".", 's');
@@ -588,8 +571,8 @@ int tesh_shm(int argc, char *argv[])
     // 删除共享内存
     shmctl(shmid, IPC_RMID, NULL);
 
-    return 0;
 }
+END_TEST
 
 #define MSG_SIZE 1024
 
@@ -598,7 +581,7 @@ struct msgbuf_t {
     char mtext[MSG_SIZE];   /* message data */
 };
 
-int test_msg(int argc, char *argv[])
+START_TEST(test_msg)
 {
     int msqid;
     key_t key;
@@ -657,10 +640,10 @@ int test_msg(int argc, char *argv[])
     // 删除消息队列
     msgctl(msqid, IPC_RMID, NULL);
 
-    return 0;
 }
+END_TEST
 
-int test_fork(int argc, char *argv[])
+START_TEST(test_fork)
 {
     pid_t pid = fork();
     if (pid == -1) {
@@ -669,6 +652,7 @@ int test_fork(int argc, char *argv[])
     } else if (pid == 0) {
         // Child process
         printf("Child process\n");
+        VMPL_ENTER;
         exit(EXIT_SUCCESS);
     } else {
         // Parent process
@@ -682,10 +666,10 @@ int test_fork(int argc, char *argv[])
         }
     }
 
-    return 0;
 }
+END_TEST
 
-int test_vfork(int argc, char *argv[])
+START_TEST(test_vfork)
 {
     /* vfork syscall cannot be made from C code */
     pid_t pid = vfork();
@@ -695,6 +679,7 @@ int test_vfork(int argc, char *argv[])
     } else if (pid == 0) {
         // Child process
         printf("Child process\n");
+        VMPL_ENTER;
         exit(EXIT_SUCCESS);
     } else {
         // Parent process
@@ -708,33 +693,27 @@ int test_vfork(int argc, char *argv[])
         }
     }
 
-    return 0;
 }
+END_TEST
 
 void *thread_func(void *arg)
 {
-    int argc = *(int *)arg;
     printf("Hello from thread\n");
-    printf("argc: %d\n", argc);
+    VMPL_ENTER;
     return NULL;
 }
 
-int test_pthread(int argc, char *argv[])
+START_TEST(test_pthread)
 {
     pthread_t thread;
-    pthread_attr_t attr;
     printf("Hello from main thread\n");
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-    int ret = pthread_create(&thread, &attr, thread_func, &argc);
-    if (ret != 0) {
-        perror("pthread_create");
-        exit(EXIT_FAILURE);
-    }
+    int rc = pthread_create(&thread, NULL, thread_func, NULL);
+    ck_assert_int_eq(rc, 0);
+
     pthread_join(thread, NULL);
     printf("Joined thread\n");
-    return 0;
 }
+END_TEST
 
 static void self_ipi_hanlder(struct dune_tf *tf)
 {
@@ -743,7 +722,7 @@ static void self_ipi_hanlder(struct dune_tf *tf)
     printf("ipi_handler_self: EOI sent\n");
 }
 
-int test_self_posted_ipi(int argc, char *argv[])
+START_TEST(test_self_posted_ipi)
 {
     printf("Hello from main thread\n");
 
@@ -755,8 +734,8 @@ int test_self_posted_ipi(int argc, char *argv[])
 
     printf("Sent IPI to self\n");
 
-    return 0;
 }
+END_TEST
 
 static void ipi_hanlder(struct dune_tf *tf)
 {
@@ -787,7 +766,7 @@ static void *ipi_thread(void *arg)
 	return NULL;
 }
 
-int test_posted_ipi(int argc, char *argv[])
+START_TEST(test_posted_ipi)
 {
 	volatile int ret;
 	cpu_set_t cpus;
@@ -818,7 +797,8 @@ int test_posted_ipi(int argc, char *argv[])
 #else
         pthread_setaffinity_np(pthreads[i], sizeof(cpu_set_t), &cpus);
 #endif
-		pthread_create(&pthreads[i], &attr, ipi_thread, (void *)&ready[i]);
+		int rc = pthread_create(&pthreads[i], &attr, ipi_thread, (void *)&ready[i]);
+        ck_assert_int_eq(rc, 0);
 	}
 
     // Wait for threads to start
@@ -840,28 +820,36 @@ int test_posted_ipi(int argc, char *argv[])
 		pthread_join(pthreads[i], NULL);
 	}
 
-    return 0;
+}
+END_TEST
+
+static void pgflt_handler(struct dune_tf *tf)
+{
+    int rc, level;
+	uint64_t cr2 = read_cr2();
+	pte_t *ptep;
+	log_warn("dune: page fault at 0x%016lx, error-code = %x", cr2, tf->err);
+	rc = lookup_address(cr2, &level, &ptep);
+	if (rc != 0) {
+		log_err("dune: page fault at unmapped addr 0x%016lx", cr2);
+	} else {
+		log_warn("dune: page fault at mapped addr 0x%016lx", cr2);
+	}
 }
 
-static int test_pgflt(int argc, char *argv[])
+START_TEST(test_pgflt)
 {
     char *addr_ro;
     addr_ro = mmap(NULL, 4096, PROT_READ, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
-    printf("addr_ro: %p\n", addr_ro);
-
-    VMPL_ENTER;
-
-    *addr_ro = 'a';
-
-    printf("addr_ro: %c\n", *addr_ro);
-
-    return 0;
+    dune_register_pgflt_handler(pgflt_handler);
+    *addr_ro = 1;
 }
+END_TEST
 
-#ifdef HAVE_SECCOMP
-#include <seccomp.h>
-int test_seccomp(int argc, char *argv[])
+#ifdef USE_SECCOMP
+#include <seccomp.h> /* libseccomp */
+START_TEST(test_seccomp)
 {
     printf("step 1: unrestricted\n");
 
@@ -893,266 +881,202 @@ int test_seccomp(int argc, char *argv[])
     printf("step 4: !! YOU SHOULD NOT SEE ME !!\n");
 
     // Success (well, not so in this case...)
-    return 0;
 }
+END_TEST
 #endif
 
-void run_test(Test *test, int argc, char *argv[]) {
-    printf("Running test %s...\n", test->name);
-    pid_t pid = fork();
-    if (pid == -1) {
-        perror("fork");
-        exit(EXIT_FAILURE);
-    } else if (pid == 0) {
-        // Child process
-        int ret;
-        if (test->prolog != NULL) {
-            ret = test->prolog(argc, argv); 
-            if (ret) {
-                printf("Enter dune mode failed!\n");
-                exit(ret);
-            }
-        }
-        if (test->exec_func) {
-            ret = test->exec_func(argc, argv);
-            exit(ret);
-        }
-    } else {
-        // Parent process
-        int status;
-        waitpid(pid, &status, 0);
-        if (WIFEXITED(status)) {
-            int ret = WEXITSTATUS(status);
-            if (ret == 0) {
-                printf(COLOR_GREEN "Test %s passed\n" COLOR_RESET, test->name);
-            } else {
-                printf(COLOR_RED "Test %s failed with exit code %d\n" COLOR_RESET, test->name, ret);
-            }
-        } else {
-            printf(COLOR_RED "Test %s failed with signal %d\n" COLOR_RESET, test->name, WTERMSIG(status));
-        }
-    }
-}
 
-static Test tests[] = {
-    {"test_process", vmpl_process, vmpl_enter},
-    {"test_mxml", test_mxml, vmpl_enter},
-    {"test_zlib", test_zlib, vmpl_enter},
-    {"test_bitmap", test_bitmap, vmpl_enter},
-    {"test_hbitmap", test_hbitmap, vmpl_enter},
-    {"test_bmap", test_bmap, vmpl_enter},
-    {"test_socket", test_socket, NULL},
-    {"test_rdtsc", test_rdtsc, vmpl_enter},
-    {"test_time", test_time, vmpl_enter},
-    {"test_sys", test_sys, vmpl_enter},
-    {"test_cpuid", test_cpuid, vmpl_enter},
-    {"test_prctl", test_prctl, vmpl_enter},
-    {"test_debug", test_debug, vmpl_enter},
-    {"test_syscall", test_syscall, vmpl_enter},
-    {"test_mmap", test_mmap, vmpl_enter},
-    {"test_munmap", test_munmap, vmpl_enter},
-    {"test_mprotect", test_mprotect, vmpl_enter},
-    {"test_seimi", test_seimi, NULL},
-    {"test_seimi_ro", test_seimi_ro, NULL},
-    {"test_sbrk", test_sbrk, vmpl_enter},
-    {"test_pipe", test_pipe, NULL},
-    {"test_sem", test_sem, NULL},
-    {"test_semaphore", test_semaphore, NULL},
-    {"test_shm", tesh_shm, NULL},
-    {"test_msg", test_msg, NULL},
-    {"test_signal", test_signal, vmpl_enter},
-    {"test_vsyscall", test_vsyscall, vmpl_enter},
-    {"test_vdso", test_vdso, vmpl_enter},
-    {"test_fork", test_fork, vmpl_enter},
-    {"test_vfork", test_vfork, vmpl_enter},
-    {"test_pthread", test_pthread, vmpl_enter},
-    {"test_posted_ipi", test_posted_ipi, vmpl_enter},
-    {"test_self_posted_ipi", test_self_posted_ipi, vmpl_enter},
-    {"test_pgflt", test_pgflt, NULL},
-#ifdef HAVE_SECCOMP
-    {"test_seccomp", test_seccomp, vmpl_enter},
-#endif
-    {"vmpl_server", vmpl_server, vmpl_enter},
-    {"vmpl_client", vmpl_client, vmpl_enter},
-    {"bench_dune_ring", bench_dune_ring, NULL},
-};
-
-#define num_tests (sizeof(tests) / sizeof(Test))
-
-struct test_args {
-    char *test_name;
-    int run_all;
-    int list_tests;
-    int show_help;
-    int show_maps;
-    int show_time;
-    int log_level;
-};
-
-void print_proc_self_maps() {
-    char command[100];
-    printf("proc/self/maps:\n");
-    sprintf(command, "cat /proc/%d/maps", getpid());
-    system(command);
-}
-
-#ifdef HAVE_ARGP
-#include <argp.h>
-
-static struct argp_option options[] = {
-    // define options
-    {"all-tests", 'a', 0, 0, "Run all tests", 1},
-    {"test-name", 't', "TEST_NAME", 0, "Run a specific test", 1},
-    {"list-tests", 'l', 0, 0, "List all tests", 1},
-    {"help", 'h', 0, 0, "Show help", 1},
-    {"show-maps", 'm', 0, 0, "Show /proc/self/maps", 1},
-    {"show-time", 's', 0, 0, "Show time", 1},
-    {"log-level", 'v', "LOG_LEVEL", 0, "Set log level", 1},
-    {0}
-};
-
-static error_t parse_opt(int key, char *arg, struct argp_state *state) {
-    // parse options
-    struct test_args *args = state->input;
-    switch (key) {
-        case 'a':
-            args->run_all = 1;
-            break;
-        case 't':
-            args->test_name = arg;
-            break;
-        case 'l':
-            args->list_tests = 1;
-            break;
-        case 'h':
-            args->show_help = 1;
-            break;
-        case 'm':
-            args->show_maps = 1;
-            break;
-        case 's':
-            args->show_time = 1;
-            break;
-        case 'v':
-            args->log_level = atoi(arg);
-            break;
-        case ARGP_KEY_ARG:
-            argp_usage(state);
-            break;
-        default:
-            return ARGP_ERR_UNKNOWN;
-    }
-    return 0;
-}
-
-static struct argp argp = {options, parse_opt};
-
-static int parse_args(int argc, char *argv[], struct test_args *args) {
-    argp_parse(&argp, argc, argv, 0, 0, args);
-    return 0;
-}
-#else
-static void usage(const char *program_name) {
-    printf("Usage: %s [-a] [-t test_name] [-l] [-h] [-m] [-s] [-v log_level]\n", program_name);
-}
-
-static int parse_args(int argc, char *argv[], struct test_args *args) {
-    int opt;
-    while ((opt = getopt(argc, argv, "alt:hmsv:")) != -1) {
-        switch (opt) {
-            case 'a':
-                args->run_all = 1;
-                break;
-            case 't':
-                args->test_name = optarg;
-                break;
-            case 'l':
-                args->list_tests = 1;
-                break;
-            case 'h':
-                args->show_help = 1;
-                break;
-            case 'm':
-                args->show_maps = 1;
-                break;
-            case 's':
-                args->show_time = 1;
-                break;
-            case 'v':
-                args->log_level = atoi(optarg);
-                break;
-            case '?':
-                usage(argv[0]);
-                return 1;
-        }
-    }
-
-    return 0;
-}
-#endif
-
-int main(int argc, char** argv)
+Suite *sys_suite(void)
 {
-    struct test_args args = {
-        .test_name = NULL,
-        .run_all = 0,
-        .list_tests = 0,
-        .show_help = 0,
-        .show_maps = 0,
-        .show_time = 0,
-        .log_level = LOG_LEVEL_INFO,
-    };
-    
-    if (parse_args(argc, argv, &args) != 0) {
-        return 1;
-    }
+    Suite *s;
 
-    if (args.log_level >= LOG_LEVEL_TRACE 
-        && args.log_level <= LOG_LEVEL_ERROR) {
-        set_log_level(args.log_level);
-    } else {
-        printf("Invalid log level %d\n", args.log_level);
-        return 1;
-    }
+    s = suite_create("System Calls");
 
-    if (args.show_time) {
-        set_show_time(true);
-    }
+    /* Core test case */
+    TCase *tc_core = tcase_create("Core");
 
-    if (args.show_help) {
-        usage(argv[0]);
-        return 0;
-    }
+    tcase_add_test(tc_core, test_process);
+    // tcase_add_test(tc_core, test_sys); // Segmentation fault
+    tcase_add_test(tc_core, test_prctl);
+    tcase_add_test(tc_core, test_rdtsc);
+    // tcase_add_test(tc_core, test_cpuid); // #VC exception
+    // tcase_add_test(tc_core, test_debug); // Segmentation fault
+    tcase_add_test(tc_core, test_syscall);
+    tcase_add_test(tc_core, test_vsyscall);
 
-    if (args.list_tests) {
-        printf("Supported tests:\n");
-        for (int i = 0; i < num_tests; i++) {
-            printf("  %s\n", tests[i].name);
-        }
-        return 0;
-    }
+    suite_add_tcase(s, tc_core);
 
-    if (args.show_maps)
-        print_proc_self_maps();
+    return s;
+}
 
-    if (args.run_all) {
-        for (int i = 0; i < num_tests; i++) {
-            run_test(&tests[i], argc, argv);
-        }
-        return 0;
-    } else if (args.test_name != NULL) {
-        for (int i = 0; i < num_tests; i++) {
-            if (strstr(args.test_name, tests[i].name) != NULL) {
-                run_test(&tests[i], argc, argv);
-                return 0;
-            }
-        }
-        printf("Test %s not found\n", args.test_name);
-        return 1;
-    } else {
-        usage(argv[0]);
-        return 1;
-    }
+Suite *proc_suite(void)
+{
+    Suite *s;
+    TCase *tc_core;
 
-    return 0;
+    s = suite_create("Process Management");
+
+    /* Core test case */
+    tc_core = tcase_create("Core");
+
+    tcase_add_test(tc_core, test_fork);
+    tcase_add_test(tc_core, test_vfork);
+    tcase_add_test(tc_core, test_pthread);
+    tcase_add_test(tc_core, test_posted_ipi);
+    tcase_add_test(tc_core, test_self_posted_ipi);
+
+    suite_add_tcase(s, tc_core);
+
+    return s;
+}
+
+Suite *vm_suite(void)
+{
+    Suite *s;
+    TCase *tc_core;
+
+    s = suite_create("Virtual Memory");
+
+    /* Core test case */
+    tc_core = tcase_create("Core");
+
+    tcase_add_test(tc_core, test_mmap);
+    tcase_add_test(tc_core, test_mprotect);
+    tcase_add_test(tc_core, test_munmap);
+    tcase_add_test(tc_core, test_sbrk);
+
+    suite_add_tcase(s, tc_core);
+
+    return s;    
+}
+
+Suite *ipc_suite(void)
+{
+    Suite *s;
+    TCase *tc_core;
+
+    s = suite_create("Inter-Process Communication");
+
+    /* Core test case */
+    tc_core = tcase_create("Core");
+
+    tcase_add_test(tc_core, test_signal);
+    tcase_add_test(tc_core, test_socket);
+    tcase_add_test(tc_core, test_pipe);
+    tcase_add_test(tc_core, test_shm);
+    tcase_add_test(tc_core, test_sem);
+    tcase_add_test(tc_core, test_msg);
+
+    suite_add_tcase(s, tc_core);
+
+    return s;
+}
+
+Suite *vdso_suite(void)
+{
+    Suite *s;
+    TCase *tc_core;
+
+    s = suite_create("vDSO");
+
+    /* Core test case */
+    tc_core = tcase_create("Core");
+    tcase_add_test(tc_core, test_vdso);
+    tcase_add_test(tc_core, test_time_vdso);
+    tcase_add_test(tc_core, test_time_syscall);
+    tcase_add_test(tc_core, test_time);
+
+    suite_add_tcase(s, tc_core);
+
+    return s;
+}
+
+Suite *security_suite(void)
+{
+    Suite *s;
+    TCase *tc_core;
+
+    s = suite_create("Security");
+
+    /* Core test case */
+    tc_core = tcase_create("Core");
+
+#ifdef USE_SECCOMP
+    tcase_add_test(tc_core, test_seccomp);
+#endif
+
+    suite_add_tcase(s, tc_core);
+
+    return s;
+}
+
+Suite *seimi_suite(void)
+{
+    Suite *s;
+    TCase *tc_core;
+
+    s = suite_create("seimi");
+
+    /* Core test case */
+    tc_core = tcase_create("Core");
+
+    tcase_add_test(tc_core, test_seimi);
+    // tcase_add_test(tc_core, test_seimi_ro);
+
+    suite_add_tcase(s, tc_core);
+
+    return s;
+}
+
+Suite *misc_suite(void)
+{
+    Suite *s;
+    TCase *tc_core;
+
+    s = suite_create("Miscellaneous");
+
+    /* Core test case */
+    tc_core = tcase_create("Core");
+
+    suite_add_tcase(s, tc_core);
+
+    return s;
+}
+
+int main(int argc, char *atgv[])
+{
+    int number_failed;
+    Suite *sys, *proc, *vm, *ipc, *vdso, *security, *seimi, *misc, *xml, *zlib;
+    SRunner *sr;
+
+    sys = sys_suite();
+    proc = proc_suite();
+    vm = vm_suite();
+    ipc = ipc_suite();
+    vdso = vdso_suite();
+    security = security_suite();
+    seimi = seimi_suite();
+    misc = misc_suite();
+    xml = xml_suite();
+    zlib = zlib_suite();
+
+    sr = srunner_create(NULL);
+    srunner_add_suite(sr, sys);
+    // srunner_add_suite(sr, proc);
+    srunner_add_suite(sr, vm);
+    // srunner_add_suite(sr, ipc);
+    srunner_add_suite(sr, vdso);
+    srunner_add_suite(sr, xml);
+    srunner_add_suite(sr, zlib);
+    srunner_add_suite(sr, security);
+    srunner_add_suite(sr, seimi);
+    // srunner_add_suite(sr, misc);
+
+    srunner_set_log(sr, "test.log");
+    srunner_set_fork_status(sr, CK_NOFORK);
+    srunner_run_all(sr, CK_VERBOSE);
+    number_failed = srunner_ntests_failed(sr);
+    srunner_free(sr);
+
+    return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

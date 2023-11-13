@@ -20,11 +20,7 @@ static void divide_by_zero_handler(struct dune_tf *tf)
 
 int main(int argc, char *argv[])
 {
-	volatile int ret = 0;
-
-	printf("hello: not running dune yet\n");
-
-	VMPL_ENTER;
+	volatile int ret;
 
 	printf("hello: now printing from dune mode\n");
 
@@ -32,9 +28,9 @@ int main(int argc, char *argv[])
 
 	// show_segment_registers();
 
-	ret = 1 / ret; /* divide by zero */
+	ret = argc / (argc - 1); /* divide by zero */
 
-	printf("hello: we won't reach this call\n");
+	printf("hello: we won't reach this call: %d\n", ret);
 
 	return 0;
 }

@@ -3,20 +3,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#ifdef DUNE_TEST
-#include "libdune/dune.h"
-#include "libdune/cpu-x86.h"
-#else
-#include <vmpl/vmpl.h>
-#endif
-
 int main(int argc, char *argv[])
 {
-	if (dune_init_and_enter() != 0) {
-		printf("failed to init dune\n");
-		return 1;
-	}
-
 	int p = fork();
 	if (p < 0) {
 		printf("fork error: %d\n", p);
@@ -34,4 +22,5 @@ int main(int argc, char *argv[])
 		}
 		printf("done waiting\n");
 	}
+	return 0;
 }

@@ -1,9 +1,11 @@
 #ifdef __cplusplus
-extern "C" {
+"C" {
 #endif
 
 #include <stdint.h>
 #include <time.h>
+#include <check.h>
+#include "config.h"
 
 #define CLOCK_MONOTONIC_RAW 4
 #define NUM_ITERATIONS 1000000
@@ -27,15 +29,13 @@ extern "C" {
 #define NUM_THREADS 3
 #define TEST_VECTOR 0xF2
 
-extern int vmpl_server(int argc, char *argv[]);
-extern int vmpl_client(int argc, char *argv[]);
-extern int bench_dune_ring(int argc, char *argv[]);
-extern int test_semaphore(int argc, char *argv[]);
-extern int test_bitmap(int argc, char *argv[]);
-extern int test_hbitmap(int argc, char *argv[]);
-extern int test_bmap(int argc, char *argv[]);
-extern int test_mxml(int argc, char *argv[]);
-extern int test_zlib(int argc, char *argv[]);
+    int vmpl_server(int argc, char *argv[]);
+    int vmpl_client(int argc, char *argv[]);
+
+    Suite *bench_dune_ring(void);
+    Suite *bitmap_suite(void);
+    Suite *xml_suite(void);
+    Suite *zlib_suite(void);
 
 #ifdef __cplusplus
 }

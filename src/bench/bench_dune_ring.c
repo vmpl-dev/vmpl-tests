@@ -6,15 +6,12 @@
 #include <string.h>
 #include <sys/mman.h>
 
-#ifdef LIBDUNE
-#include "libdune/dune.h"
-#else
+#include <benchmark.h>
 #include <vmpl/log.h>
 #include <vmpl/sys.h>
 #include <vmpl/syscall.h>
 #include <vmpl/vmpl.h>
 #include <vmpl/mm.h>
-#endif
 
 #define N		10000
 #define MAP_ADDR	0x400000000000
@@ -73,30 +70,18 @@ static void userlevel_pgflt(void)
 	syscall(SYS_gettid);
 }
 
-static int test_pgflt(void)
-{
+START_TEST(test_pgflt)
 	int ret;
 	unsigned long sp;
 	struct dune_tf *tf = malloc(sizeof(struct dune_tf));
-	if (!tf)
-		return -ENOMEM;
+	ck_assert_ptr_ne(tf, NULL);
 
 	log_info("testing page fault from G3... ");
 
-#ifdef LIBDUNE
-	ret = dune_vm_map_pages(pgroot, (void *) MAP_ADDR, 1, PERM_R);
-	if (ret) {
-		log_err("failed to setup memory mapping");
-		return ret;
-	}
-#else
 	ret = mmap((void *)MAP_ADDR, 1, PROT_READ, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-	if (ret == MAP_FAILED) {
-		log_err("failed to setup memory mapping");
-		return ret;
-	}
+	ck_assert_ptr_ne(ret, MAP_FAILED);
+
 	log_warn("memory mapping not supported in VMPL (yet)");
-#endif
 
 	dune_register_pgflt_handler(pgflt_handler);
 	dune_register_syscall_handler(&syscall_handler1);
@@ -108,12 +93,8 @@ static int test_pgflt(void)
 	tf->rflags = 0x02;
 
 	ret = dune_jump_to_user(tf);
-
-	if (!ret)
-		log_success("[passed]\n");
-
-	return ret;
-}
+	ck_assert_int_eq(ret, 0);
+END_TEST
 
 static void userlevel_syscall(void)
 {
@@ -137,13 +118,11 @@ static void syscall_handler2(struct dune_tf *tf)
 	dune_passthrough_syscall(tf);
 }
 
-static int test_syscall(void)
-{
+START_TEST(test_syscall)
 	int ret;
 	unsigned long sp;
 	struct dune_tf *tf = malloc(sizeof(struct dune_tf));
-	if (!tf)
-		return -ENOMEM;
+	ck_assert_ptr_ne(tf, NULL);
 
 	log_info("measuring round-trip G3 syscall performance... ");
 
@@ -157,22 +136,22 @@ static int test_syscall(void)
 
 	tsc = rdtsc();
 	ret = dune_jump_to_user(tf);
+	ck_assert_int_eq(ret, 0);
+END_TEST
 
-	return ret;
-}
-
-int bench_dune_ring(int argc, char *argv[])
+Suite *bench_dune_ring(void)
 {
-	int ret;
+	Suite *s;
+	TCase *tc_core;
 
-	ret = dune_init_and_enter();
-	if (ret) {
-		printf("failed to initialize DUNE\n");
-		return ret;
-	}
+	s = suite_create("Dune ring");
 
-	test_pgflt();
-	test_syscall();
+	/* Core test case */
+	tc_core = tcase_create("Core");
 
-	return 0;
+	tcase_add_test(tc_core, test_pgflt);
+	tcase_add_test(tc_core, test_syscall);
+	suite_add_tcase(s, tc_core);
+
+	return s;
 }

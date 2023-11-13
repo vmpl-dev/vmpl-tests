@@ -172,13 +172,7 @@ static void run_test(struct test *t)
 
 int main(int argc, char *argv[])
 {
-	int i, ret;
-
-	ret = dune_init_and_enter();
-	if (ret) {
-		printf("failed to initialize dune\n");
-		return ret;
-	}
+	int i;
 
 	printf("Doing tests\n");
 
