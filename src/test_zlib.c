@@ -5,9 +5,6 @@
 
 #include "benchmark.h"
 
-#ifdef HAVE_ZLIB
-#include <zlib.h>
-
 START_TEST(test_zlib_inflate)
     char text[] = "zlib test text";
     char buf[1024];
@@ -57,7 +54,6 @@ START_TEST(test_zlib_inflate)
 
     ck_assert_str_eq(text, "zlib test text");
 END_TEST
-#endif
 
 START_TEST(test_zlib)
     char text[] = "zlib test text";
