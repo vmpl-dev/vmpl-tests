@@ -64,6 +64,35 @@ $ sudo ./run-app.sh --dunify ./dunify.so --run /usr/local/musl/bin/redis-server 
 redis-benchmark -h
 ```
 
+## lmbench-2.5
+### 安装 libtirpc
+```bash
+# 编译libtirpc
+cd ~/home
+# 下载libtirpc
+git clone git://linux-nfs.org/~steved/libtirpc
+# 进入libtirpc目录
+cd libtirpc
+# 配置libtirpc
+./configure --prefix=/usr/local/musl --disable-gssapi
+# 编译libtirpc
+make all CC=musl-gcc -j$(nproc)
+```
+
+### 安装 lmbench-2.5
+```bash
+# 编译lmbench
+# https://www.francisz.cn/2022/05/12/lmbench/
+# 下载lmbench
+wget https://master.dl.sourceforge.net/project/lmbench/lmbench/2.5/lmbench-2.5.tgz
+# 解压lmbench
+tar -zxvf lmbench-2.5.tgz
+# 进入lmbench目录
+cd ~/home/lmbench
+# 编译lmbench
+make CC=musl-gcc -j$(nproc)
+```
+
 ## Memcached-1.6.9 Test
 ### 安装 linux内核头文件
 ```bash
