@@ -86,5 +86,17 @@ END_TEST
 
 Suite *zlib_suite(void)
 {
+    Suite *s;
+    TCase *tc_core;
+
+    s = suite_create("zlib");
+
+    /* Core test case */
+    tc_core = tcase_create("zlib");
+    tcase_add_test(tc_core, test_zlib_inflate);
+    tcase_add_test(tc_core, test_zlib);
     
+    suite_add_tcase(s, tc_core);
+
+    return s;
 }
