@@ -28,7 +28,7 @@
 #include <semaphore.h>
 #include <vmpl/sys.h> // read_cr0, read_cr2, read_cr3, read_cr4, read_rflags, rdmsr
 #include <vmpl/apic.h>
-#include <vmpl/mm.h>
+// #include <vmpl/mm.h>
 #include <vmpl/vmpl.h>  // vmpl_enter, vmpl_server, vmpl_client
 #include <vmpl/seimi.h> // sa_alloc, sa_free
 #include <vmpl/log.h> // log_init, log_set_level

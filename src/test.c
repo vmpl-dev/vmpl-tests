@@ -6,6 +6,9 @@
 #include <err.h>
 #include <string.h>
 #include <pthread.h>
+#if defined(__clang__)
+#include <signal.h>
+#endif
 
 #ifdef DUNE_TEST
 #include "libdune/dune.h"

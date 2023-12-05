@@ -6,6 +6,19 @@
 make -j$(nproc) all
 ~~~
 
+## Docker Test
+### Build docker image
+~~~bash
+# 进入docker目录
+cd ~/vmpl-process/docker
+# 构建docker镜像
+sudo docker build -t vmpl-process .
+~~~
+
+```
+docker run -it -v$(pwd):/root/app --workdir=/root/app andrewd/musl-clang /bin/bash
+```
+
 ### Run tests
 ~~~bash
 # 加载内核模块（vmpl-process）
