@@ -1,11 +1,4 @@
 # VMPL-Process Test Suite
-## Build with out libcheck
-不采用libcheck单元测试框架的手动测试
-~~~bash
-./configure
-make -j$(nproc) all
-~~~
-
 ## Build with libcheck
 采用libcheck单元测试框架的自动化测试
 ~~~bash
@@ -20,8 +13,48 @@ make -j$(nproc) all
 # 输出有哪些测试
 ./benchmark -l
 # 执行test_process测试程序
-sudo ./benchmark -ttest_process
+sudo ./run-app.sh --load --loglevel debug --run ./benchmark
 ~~~
+
+[x] System Calls
+- [x] process
+- [x] sys
+- [x] prctl
+- [x] rdtsc
+- [x] syscall
+- [x] vsyscall
+[x] Process Management
+- [x] fork
+- [x] vfork
+- [x] pthread
+- [x] posted_ipi
+- [x] self-posted ipi
+[x] Virtual Memory
+- [x] mmap
+- [x] mprotect
+- [x] munmap
+- [x] brk
+[x] Inter-Process Communication
+- [x] pipe
+- [x] socket
+- [x] signal
+- [x] shm
+- [x] sem
+- [x] msg
+[x] vDSO
+- [x] gettimeofday
+- [x] time
+- [x] clock_gettime
+- [x] getcpu
+- [x] getrandom
+- [x] getentropy
+[x] Security
+- [x] seccomp
+[x] Misc
+- [x] xml
+- [x] zlib
+- [x] json
+
 ## Redis-6.2.5 Test
 ### Redis-6.2.5 on Host
 ```bash

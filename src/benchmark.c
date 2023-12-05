@@ -67,39 +67,27 @@ void handle_sigint(int sig)
 
 START_TEST(test_process)
 {
+    VMPL_ENTER;
     printf("vmpl-process: hello world!\n");
 
     int fd;
     ssize_t num_read;
     fd = open("/proc/self/maps", O_RDONLY, 0);
-    if (fd == -1) {
-        exit(EXIT_FAILURE);
-    }
+    ck_assert_ptr_ne(fd, -1);
 
     while ((num_read = read(fd, line, 1024)) > 0) {
         ssize_t num_written = write(STDOUT_FILENO, line, num_read);
-        if (num_written != num_read) {
-            perror("vmpl-process: write");
-            exit(EXIT_FAILURE);
-        }
+        ck_assert_int_eq(num_written, num_read);
     }
 
-    if (num_read == -1) {
-        perror("vmpl-process: read");
-        exit(EXIT_FAILURE);
-    }
-
-    if (close(fd) == -1) {
-        perror("vmpl-process: close");
-        exit(EXIT_FAILURE);
-    }
-
-    printf("vmpl-process exiting\n");
+    ck_assert_int_ne(num_read, -1);
+    ck_assert_int_ne(close(fd), -1);
 }
 END_TEST
 
 START_TEST(test_socket)
 {
+    VMPL_ENTER;
     pid_t server_pid = fork();
     if (server_pid == -1) {
         perror("fork");
@@ -144,6 +132,7 @@ END_TEST
 
 START_TEST(test_sys)
 {
+    VMPL_ENTER;
     printf("cr0: 0x%lx\n", read_cr0());
     printf("cr2: 0x%lx\n", read_cr2());
     printf("cr3: 0x%lx\n", read_cr3());
@@ -161,6 +150,7 @@ static void vc_handler(struct dune_tf *tf)
 
 START_TEST(test_cpuid)
 {
+    VMPL_ENTER;
     unsigned int eax, ebx, ecx, edx;
 
     dune_register_intr_handler(T_VC, vc_handler);
@@ -178,30 +168,39 @@ START_TEST(test_cpuid)
 END_TEST
 
 START_TEST(test_vsyscall)
+{
+    VMPL_ENTER;
     struct timeval tv;
     struct timezone tz;
 
     /* 测试 gettimeofday 函数 */
-    ck_assert_int_ne(gettimeofday(&tv, &tz), 0);
+    ck_assert_int_eq(gettimeofday(&tv, &tz), 0);
 
     /* 测试 time 函数 */
     ck_assert_int_ne(time(NULL), -1);
+}
 END_TEST
 
 START_TEST(test_vdso)
+{
+    VMPL_ENTER;
     int a = getpid();
     int b = getpid();
+
     ck_assert_int_eq(a, b);
+}
 END_TEST
 
 START_TEST(test_signal)
 {
+    VMPL_ENTER;
     signal(SIGINT, handle_sigint);
 }
 END_TEST
 
 START_TEST(test_debug)
 {
+    VMPL_ENTER;
     // 读取DR0-DR7的值并打印
     printf("dr0: 0x%lx\n", read_dr(0));
     printf("dr1: 0x%lx\n", read_dr(1));
@@ -213,6 +212,8 @@ START_TEST(test_debug)
 END_TEST
 
 START_TEST(test_prctl)
+{
+    VMPL_ENTER;
     int ret_fs, ret_gs;
     unsigned long fs_reg_value;
     unsigned long gs_reg_value;
@@ -224,16 +225,21 @@ START_TEST(test_prctl)
 
     ck_assert_int_eq(ret_gs, 0);
     ck_assert_int_ne(gs_reg_value, 0);
+}
 END_TEST
 
 START_TEST(test_syscall)
+{
+    VMPL_ENTER;
     int fd = open("/dev/zero", O_RDONLY);
     ck_assert_int_ne(fd, -1);
     close(fd);
+}
 END_TEST
 
 START_TEST(test_rdtsc)
 {
+    VMPL_ENTER;
 	uint64_t overhead = ~0UL;
 	int i;
 
@@ -251,6 +257,7 @@ END_TEST
 
 START_TEST(test_time_vdso)
 {
+    VMPL_ENTER;
     uint64_t start_time, end_time;
     uint64_t total_time = 0;
 
@@ -267,6 +274,7 @@ END_TEST
 
 START_TEST(test_time_syscall)
 {
+    VMPL_ENTER;
     uint64_t start_time, end_time;
     uint64_t total_time = 0;
 
@@ -284,6 +292,7 @@ END_TEST
 
 START_TEST(test_time)
 {
+    VMPL_ENTER;
     pid_t pid;
     uint64_t start_time;
     uint64_t end_time;
@@ -313,7 +322,8 @@ END_TEST
 
 START_TEST(test_mmap)
 {
-    int fd = open("/dev/zero", O_RDONLY);
+    VMPL_ENTER;
+    int fd = open("file.txt", O_RDONLY);
     void *addr = mmap(NULL, 4096, PROT_READ, MAP_PRIVATE, fd, 0);
     if (addr == MAP_FAILED) {
         perror("mmap");
@@ -327,26 +337,33 @@ END_TEST
 
 START_TEST(test_mprotect)
 {
-    int fd = open("/dev/zero", O_RDONLY);
+    VMPL_ENTER;
+    int fd = open("file.txt", O_RDONLY);
     void *addr = mmap(NULL, 4096, PROT_READ, MAP_PRIVATE, fd, 0);
+    ck_assert_ptr_ne(addr, MAP_FAILED);
     printf("addr: %p\n", addr);
-    mprotect(addr, 4096, PROT_READ | PROT_WRITE);
+    int ret = mprotect(addr, 4096, PROT_READ | PROT_WRITE);
+    ck_assert_int_eq(ret, 0);
     close(fd);
 }
 END_TEST
 
 START_TEST(test_munmap)
 {
-    int fd = open("/dev/zero", O_RDONLY);
+    VMPL_ENTER;
+    int fd = open("file.txt", O_RDONLY);
     void *addr = mmap(NULL, 4096, PROT_READ, MAP_PRIVATE, fd, 0);
+    ck_assert_ptr_ne(addr, MAP_FAILED);
     printf("addr: %p\n", addr);
-    munmap(addr, 4096);
+    int ret = munmap(addr, 4096);
+    ck_assert_int_eq(ret, 0);
     close(fd);
 }
 END_TEST
 
 START_TEST(test_seimi)
 {
+    VMPL_ENTER;
     char *seimi_user;
 
     // Allocate 4096 bytes of memory
@@ -371,6 +388,7 @@ END_TEST
 
 START_TEST(test_seimi_ro)
 {
+    VMPL_ENTER;
     char *seimi_user, *seimi_super;
     long offset;
 
@@ -404,6 +422,7 @@ END_TEST
 
 START_TEST(test_sbrk)
 {
+    VMPL_ENTER;
     void *cur_brk, *tmp_brk = NULL;
 
     printf("The original program break: %p\n", sbrk(0));
@@ -467,6 +486,7 @@ END_TEST
 
 START_TEST(test_pipe)
 {
+    VMPL_ENTER;
     int pipefd[2];
     pid_t cpid;
     char buf;
@@ -639,7 +659,6 @@ START_TEST(test_msg)
 
     // 删除消息队列
     msgctl(msqid, IPC_RMID, NULL);
-
 }
 END_TEST
 
@@ -724,6 +743,7 @@ static void self_ipi_hanlder(struct dune_tf *tf)
 
 START_TEST(test_self_posted_ipi)
 {
+    VMPL_ENTER;
     printf("Hello from main thread\n");
 
     // register IPI handler
@@ -834,13 +854,16 @@ static void pgflt_handler(struct dune_tf *tf)
 		log_err("dune: page fault at unmapped addr 0x%016lx", cr2);
 	} else {
 		log_warn("dune: page fault at mapped addr 0x%016lx", cr2);
-	}
+        *ptep |= PTE_PRESENT | PTE_WRITE;
+    }
 }
 
 START_TEST(test_pgflt)
 {
+    VMPL_ENTER;
     char *addr_ro;
     addr_ro = mmap(NULL, 4096, PROT_READ, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    ck_assert_ptr_ne(addr_ro, MAP_FAILED);
 
     dune_register_pgflt_handler(pgflt_handler);
     *addr_ro = 1;
@@ -851,6 +874,7 @@ END_TEST
 #include <seccomp.h> /* libseccomp */
 START_TEST(test_seccomp)
 {
+    VMPL_ENTER;
     printf("step 1: unrestricted\n");
 
     // Init the filter
@@ -896,7 +920,7 @@ Suite *sys_suite(void)
     TCase *tc_core = tcase_create("Core");
 
     tcase_add_test(tc_core, test_process);
-    // tcase_add_test(tc_core, test_sys); // Segmentation fault
+    tcase_add_test(tc_core, test_sys);
     tcase_add_test(tc_core, test_prctl);
     tcase_add_test(tc_core, test_rdtsc);
     // tcase_add_test(tc_core, test_cpuid); // #VC exception
@@ -919,7 +943,7 @@ Suite *proc_suite(void)
     /* Core test case */
     tc_core = tcase_create("Core");
 
-    tcase_add_test(tc_core, test_fork);
+    // tcase_add_test(tc_core, test_fork);
     tcase_add_test(tc_core, test_vfork);
     tcase_add_test(tc_core, test_pthread);
     tcase_add_test(tc_core, test_posted_ipi);
@@ -960,12 +984,12 @@ Suite *ipc_suite(void)
     /* Core test case */
     tc_core = tcase_create("Core");
 
-    tcase_add_test(tc_core, test_signal);
     tcase_add_test(tc_core, test_socket);
     tcase_add_test(tc_core, test_pipe);
-    tcase_add_test(tc_core, test_shm);
     tcase_add_test(tc_core, test_sem);
     tcase_add_test(tc_core, test_msg);
+    tcase_add_test(tc_core, test_shm);
+    tcase_add_test(tc_core, test_signal);
 
     suite_add_tcase(s, tc_core);
 
@@ -1073,7 +1097,8 @@ int main(int argc, char *atgv[])
     // srunner_add_suite(sr, misc);
 
     srunner_set_log(sr, "test.log");
-    srunner_set_fork_status(sr, CK_NOFORK);
+    srunner_set_xml(sr, "test.xml");
+    srunner_set_fork_status(sr, CK_FORK);
     srunner_run_all(sr, CK_VERBOSE);
     number_failed = srunner_ntests_failed(sr);
     srunner_free(sr);
