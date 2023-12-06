@@ -57,6 +57,8 @@ redis-benchmark -h
 ### 启动memcached server on VM
 
 ```bash
+# 安装libmemcached-tools
+sudo apt install libmemcached-tools
 # 启动memcached 单线程 64MB内存 11211端口
 memcached -u root -m 64 -p 11211 -t 1
 memcached-tool
@@ -73,4 +75,12 @@ memcached-benchmark -h
 
 ```bash
 rsync -avzP /usr/local/musl/ amd-guest:/usr/local/musl/
+```
+
+### nginx benchmark
+```bash
+# 启动nginx
+sudo ./run-app.sh --dunify ./dunify.so --run /usr/local/muslbin/nginx -c /usr/local/musl/etc/nginx/nginx.conf
+# 测试nginx
+ab -n 100000 -c 1000 http://localhost:8080/
 ```
