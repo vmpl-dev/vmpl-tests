@@ -17,7 +17,7 @@ START_TEST(test_mxml_write)
 
     mxmlElementSetAttr(node, "name", "test");
 
-    fp = fopen("test.xml", "w");
+    fp = fopen("data.xml", "w");
     ck_assert_ptr_ne(fp, NULL);
 
     ret = mxmlSaveFile(tree, fp, MXML_TEXT_CALLBACK);
@@ -33,7 +33,7 @@ START_TEST(test_mxml_read)
     mxml_node_t *node;
     FILE *fp;
 
-    fp = fopen("test.xml", "r");
+    fp = fopen("data.xml", "r");
     ck_assert_ptr_ne(fp, NULL);
 
     tree = mxmlLoadFile(NULL, fp, MXML_TEXT_CALLBACK);
@@ -72,7 +72,7 @@ START_TEST(test_mxml)
     mxmlNewText(node, 0, "value");
 
     /* 将 XML 文档保存到文件 */
-    FILE *fp = fopen("test.xml", "w");
+    FILE *fp = fopen("data.xml", "w");
     ck_assert_ptr_ne(fp, NULL);
 
     mxmlSaveFile(xml, fp, MXML_NO_CALLBACK);

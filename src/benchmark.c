@@ -943,11 +943,11 @@ Suite *proc_suite(void)
     /* Core test case */
     tc_core = tcase_create("Core");
 
-    // tcase_add_test(tc_core, test_fork);
+    tcase_add_test(tc_core, test_fork);
     tcase_add_test(tc_core, test_vfork);
     tcase_add_test(tc_core, test_pthread);
-    tcase_add_test(tc_core, test_posted_ipi);
-    tcase_add_test(tc_core, test_self_posted_ipi);
+    // tcase_add_test(tc_core, test_posted_ipi);
+    // tcase_add_test(tc_core, test_self_posted_ipi);
 
     suite_add_tcase(s, tc_core);
 
@@ -1086,15 +1086,15 @@ int main(int argc, char *atgv[])
 
     sr = srunner_create(NULL);
     srunner_add_suite(sr, sys);
-    // srunner_add_suite(sr, proc);
+    srunner_add_suite(sr, proc);
     srunner_add_suite(sr, vm);
-    // srunner_add_suite(sr, ipc);
+    srunner_add_suite(sr, ipc);
     srunner_add_suite(sr, vdso);
     srunner_add_suite(sr, xml);
     srunner_add_suite(sr, zlib);
     srunner_add_suite(sr, security);
     srunner_add_suite(sr, seimi);
-    // srunner_add_suite(sr, misc);
+    srunner_add_suite(sr, misc);
 
     srunner_set_log(sr, "test.log");
     srunner_set_xml(sr, "test.xml");
