@@ -1067,11 +1067,37 @@ Suite *misc_suite(void)
     return s;
 }
 
+// Define a argument struct for this benchmark
+struct bench_args_t {
+    char *log_file;
+};
+
+int parse_args(struct bench_args_t *args, int argc, char *argv[])
+{
+    int opt;
+    while ((opt = getopt(argc, argv, "l:")) != -1) {
+        switch (opt) {
+        case 'l':
+            args->log_file = optarg;
+            break;
+        default:
+            printf("Usage: %s [-l log_file]\n", argv[0]);
+            return -1;
+        }
+    }
+    return 0;
+}
+
 int main(int argc, char *atgv[])
 {
     int number_failed;
     Suite *sys, *proc, *vm, *ipc, *vdso, *security, *seimi, *misc, *xml, *zlib;
     SRunner *sr;
+
+    struct bench_args_t args;
+    if (parse_args(&args, argc, atgv) < 0) {
+        return EXIT_FAILURE;
+    }
 
     sys = sys_suite();
     proc = proc_suite();
@@ -1096,8 +1122,17 @@ int main(int argc, char *atgv[])
     srunner_add_suite(sr, seimi);
     srunner_add_suite(sr, misc);
 
-    srunner_set_log(sr, "test.log");
-    srunner_set_xml(sr, "test.xml");
+    if (strcmp(args.log_file, "stdout") == 0) {
+        srunner_set_log(sr, NULL);
+    } else if (strstr(args.log_file, ".log") != NULL) {
+        srunner_set_log(sr, args.log_file);
+    } else if (strstr(args.log_file, ".xml") != NULL) {
+        srunner_set_xml(sr, args.log_file);
+    } else {
+        printf("Invalid log file: %s\n", args.log_file);
+        return EXIT_FAILURE;
+    }
+
     srunner_set_fork_status(sr, CK_FORK);
     srunner_run_all(sr, CK_VERBOSE);
     number_failed = srunner_ntests_failed(sr);
