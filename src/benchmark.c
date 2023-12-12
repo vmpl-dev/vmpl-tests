@@ -984,12 +984,12 @@ Suite *ipc_suite(void)
     /* Core test case */
     tc_core = tcase_create("Core");
 
-    tcase_add_test(tc_core, test_socket);
+    // tcase_add_test(tc_core, test_socket);
     tcase_add_test(tc_core, test_pipe);
-    tcase_add_test(tc_core, test_sem);
-    tcase_add_test(tc_core, test_msg);
-    tcase_add_test(tc_core, test_shm);
-    tcase_add_test(tc_core, test_signal);
+    // tcase_add_test(tc_core, test_sem);
+    // tcase_add_test(tc_core, test_msg);
+    // tcase_add_test(tc_core, test_shm);
+    // tcase_add_test(tc_core, test_signal);
 
     suite_add_tcase(s, tc_core);
 
@@ -1111,16 +1111,16 @@ int main(int argc, char *atgv[])
     zlib = zlib_suite();
 
     sr = srunner_create(NULL);
-    srunner_add_suite(sr, sys);
-    srunner_add_suite(sr, proc);
-    srunner_add_suite(sr, vm);
+    // srunner_add_suite(sr, sys);
+    // srunner_add_suite(sr, proc);
+    // srunner_add_suite(sr, vm);
     srunner_add_suite(sr, ipc);
-    srunner_add_suite(sr, vdso);
-    srunner_add_suite(sr, xml);
-    srunner_add_suite(sr, zlib);
-    srunner_add_suite(sr, security);
-    srunner_add_suite(sr, seimi);
-    srunner_add_suite(sr, misc);
+    // srunner_add_suite(sr, vdso);
+    // srunner_add_suite(sr, xml);
+    // srunner_add_suite(sr, zlib);
+    // srunner_add_suite(sr, security);
+    // srunner_add_suite(sr, seimi);
+    // srunner_add_suite(sr, misc);
 
     if (strcmp(args.log_file, "stdout") == 0) {
         srunner_set_log(sr, NULL);

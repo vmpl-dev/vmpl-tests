@@ -45,7 +45,7 @@ test_LDADD = -lvmpl -lpthread
 
 test_sandbox_SOURCES = src/test_sandbox.c
 test_sandbox_LDFLAGS = -pthread 
-test_sandbox_LDADD = -lvmpl
+test_sandbox_LDADD = 
 
 test_fork_SOURCES = src/test_fork.c
 test_fork_LDFLAGS = -pthread
