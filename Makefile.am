@@ -8,7 +8,8 @@ AM_LDFLAGS =
 
 # Specify the target and source files for the myapp project
 # Specify the linker flags and the libraries
-bin_PROGRAMS = benchmark hello fork timetest test test_sandbox test_fork
+bin_PROGRAMS = benchmark hello fork timetest test test_sandbox test_fork xsave xsave_new \
+                test_pthread
 
 benchmark_SOURCES = src/benchmark.c \
                     src/server.c src/client.c \
@@ -50,3 +51,10 @@ test_sandbox_LDADD =
 test_fork_SOURCES = src/test_fork.c
 test_fork_LDFLAGS = -pthread
 test_fork_LDADD = -lvmpl
+
+xsave_SOURCES = src/xsave.c
+
+xsave_new_SOURCES = src/xsave-new.c
+
+test_pthread_SOURCES = src/test_pthread.c
+test_pthread_LDADD = -lpthread
