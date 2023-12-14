@@ -15,6 +15,12 @@ benchmark_SOURCES = src/benchmark.c \
                     src/server.c src/client.c \
                     src/bench/bench_dune_ring.c \
                     src/semaphore_test.c \
+                    src/test_sys.c \
+                    src/test_proc.c \
+                    src/test_ipc.c \
+                    src/test_mem.c \
+                    src/test_vdso.c \
+                    src/test_security.c \
                     src/test_bitmap.c
 benchmark_LDADD = -lvmpl -lpthread -lz -lcheck
 

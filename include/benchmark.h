@@ -29,11 +29,22 @@
 #define NUM_THREADS 3
 #define TEST_VECTOR 0xF2
 
+// Commom functions
+    int bind_cpu(int cpu);
+
+// Benchmark functions
     int vmpl_server(int argc, char *argv[]);
     int vmpl_client(int argc, char *argv[]);
 
+// Test functions
     Suite *bench_dune_ring(void);
     Suite *bitmap_suite(void);
+    Suite *sys_suite(void);
+    Suite *proc_suite(void);
+    Suite *vm_suite(void);
+    Suite *ipc_suite(void);
+    Suite *vdso_suite(void);
+    Suite *security_suite(void);
     Suite *xml_suite(void);
     Suite *zlib_suite(void);
 
