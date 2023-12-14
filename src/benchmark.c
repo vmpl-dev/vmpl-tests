@@ -22,21 +22,6 @@ int bind_cpu(int cpu)
     return 0;
 }
 
-Suite *misc_suite(void)
-{
-    Suite *s;
-    TCase *tc_core;
-
-    s = suite_create("Miscellaneous");
-
-    /* Core test case */
-    tc_core = tcase_create("Misc");
-
-    suite_add_tcase(s, tc_core);
-
-    return s;
-}
-
 // Define a argument struct for this benchmark
 struct bench_args_t {
     char *log_file;
@@ -80,10 +65,10 @@ int main(int argc, char *atgv[])
     zlib = zlib_suite();
 
     sr = srunner_create(NULL);
-    srunner_add_suite(sr, sys);
-    srunner_add_suite(sr, proc);
-    srunner_add_suite(sr, vm);
-    srunner_add_suite(sr, ipc);
+    // srunner_add_suite(sr, sys);
+    // srunner_add_suite(sr, proc);
+    // srunner_add_suite(sr, vm);
+    // srunner_add_suite(sr, ipc);
     srunner_add_suite(sr, vdso);
     srunner_add_suite(sr, xml);
     srunner_add_suite(sr, zlib);

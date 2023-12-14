@@ -47,6 +47,7 @@
     Suite *security_suite(void);
     Suite *xml_suite(void);
     Suite *zlib_suite(void);
+    Suite *misc_suite(void);
 
 #ifdef __cplusplus
 }

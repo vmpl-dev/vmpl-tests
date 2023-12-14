@@ -7,7 +7,7 @@
 
 #include "benchmark.h"
 
-#ifdef USE_SECCOMP
+#ifdef HAVE_SECCOMP
 #include <seccomp.h> /* libseccomp */
 START_TEST(test_seccomp)
 {
@@ -115,7 +115,7 @@ Suite *security_suite(void)
     /* Core test case */
     tc_core = tcase_create("Security");
 
-#ifdef USE_SECCOMP
+#ifdef HAVE_SECCOMP
     tcase_add_test(tc_core, test_seccomp);
 #endif
     tcase_add_test(tc_core, test_seimi);

@@ -3,6 +3,7 @@
 
 #include "benchmark.h"
 
+#ifdef HAVE_MXML
 START_TEST(test_mxml_write)
     int ret;
     mxml_node_t *tree;
@@ -81,6 +82,7 @@ START_TEST(test_mxml)
     /* 释放 XML 文档 */
     mxmlDelete(xml);
 END_TEST
+#endif
 
 Suite *xml_suite(void)
 {
@@ -92,9 +94,11 @@ Suite *xml_suite(void)
     /* Core test case */
     tc_core = tcase_create("Core");
 
+#ifdef HAVE_MXML
     tcase_add_test(tc_core, test_mxml_write);
     tcase_add_test(tc_core, test_mxml_read);
     tcase_add_test(tc_core, test_mxml);
+#endif
     suite_add_tcase(s, tc_core);
 
     return s;

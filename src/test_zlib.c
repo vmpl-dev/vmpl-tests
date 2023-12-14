@@ -1,13 +1,19 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include <zlib.h>
 
 #include "benchmark.h"
 
+#ifdef HAVE_ZLIB
 START_TEST(test_zlib_inflate)
     char text[] = "zlib test text";
-    char buf[1024];
+    char *buf = malloc(1024);
+    if (!buf) {
+        printf("Failed to allocate memory\n");
+        exit(EXIT_FAILURE);
+    }
 
     z_stream defstream;
     defstream.zalloc = Z_NULL;
@@ -53,6 +59,9 @@ START_TEST(test_zlib_inflate)
     printf("Uncompressed string is: %s\n", text);
 
     ck_assert_str_eq(text, "zlib test text");
+
+    free(buf);
+    buf = NULL;
 END_TEST
 
 START_TEST(test_zlib)
@@ -79,6 +88,7 @@ START_TEST(test_zlib)
     printf("Compressed size is: %lu\n", strlen(buf));
     printf("Compressed string is: %s\n", buf);
 END_TEST
+#endif
 
 Suite *zlib_suite(void)
 {
@@ -89,8 +99,10 @@ Suite *zlib_suite(void)
 
     /* Core test case */
     tc_core = tcase_create("zlib");
+#ifdef HAVE_ZLIB
     tcase_add_test(tc_core, test_zlib_inflate);
     tcase_add_test(tc_core, test_zlib);
+#endif
     
     suite_add_tcase(s, tc_core);
 
