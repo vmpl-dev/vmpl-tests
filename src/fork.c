@@ -17,8 +17,6 @@ int main(int argc, char *argv[]) {
   pid_t pid;
   time_t t;
   int status;
-  int oldstate;
-  // disable cancel
   if ((pid = fork()) < 0)
     perror("fork() error");
   else if (pid == 0) {

@@ -57,12 +57,21 @@ int vmpl_server(int argc, char *argv[])
     }
 
     // 读取客户端发送的消息
-    valread = read(new_socket, buffer, 1024);
-    printf("Client: %s\n", buffer);
+    valread = recv(new_socket, buffer, sizeof(buffer) - 1, 0);
+    if (valread < 0) {
+        perror("recv");
+        exit(EXIT_FAILURE);
+    }
+    buffer[valread] = '\0'; // Ensure null-termination
+    printf("Client received: %s\n", buffer);
 
     // 发送回复消息给客户端
-    send(new_socket, hello, strlen(hello), 0);
-    printf("Hello message sent\n");
+    ssize_t bytes_sent = send(new_socket, hello, strlen(hello), 0);
+    if (bytes_sent < 0) {
+        perror("send");
+        exit(EXIT_FAILURE);
+    }
+    printf("Hello message sent to client\n");
 
     return 0;
 }

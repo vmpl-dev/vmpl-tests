@@ -48,10 +48,11 @@ START_TEST(test_time_syscall)
     VMPL_ENTER;
     uint64_t start_time, end_time;
     uint64_t total_time = 0;
+    time_t t;
 
     start_time = get_time();
     for (int i = 0; i < NUM_ITERATIONS; i++) {
-        syscall(SYS_time, NULL);
+        syscall(SYS_time, &t);
     }
     end_time = get_time();
     total_time = end_time - start_time;

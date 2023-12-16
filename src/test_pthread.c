@@ -12,8 +12,13 @@ void* thread_func(void* arg) {
 }
 
 int main() {
+    int arg = 1;
+    void* status;
     pthread_t thread;
-    if (pthread_create(&thread, NULL, thread_func, NULL) != 0) {
+    pthread_attr_t attrs;
+    pthread_attr_init(&attrs);
+    if (pthread_create(&thread, &attrs, thread_func, &arg) != 0)
+    {
         perror("pthread_create");
         return EXIT_FAILURE;
     }
@@ -27,9 +32,15 @@ int main() {
     }
 
     // Wait for the child thread to terminate
-    if (pthread_join(thread, NULL) != 0) {
+    if (pthread_join(thread, &status) != 0) {
         perror("pthread_join");
         return EXIT_FAILURE;
+    }
+
+    if (status == PTHREAD_CANCELED) {
+        printf("Child thread was cancelled.\n");
+    } else {
+        printf("Child thread exited with status %p.\n", status);
     }
 
     return EXIT_SUCCESS;

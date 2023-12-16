@@ -41,12 +41,18 @@ int vmpl_client(int argc, char *argv[])
     }
 
     // 发送消息给服务器
-    send(sock, hello, strlen(hello), 0);
-    printf("Hello message sent\n");
+    size_t hello_len = strlen(hello);
+    send(sock, hello, hello_len, 0);
+    printf("Hello message sent from client\n");
 
     // 读取服务器回复的消息
-    valread = read(sock, buffer, 1024);
-    printf("Server: %s\n", buffer);
+    valread = recv(sock, buffer, 1024, 0);
+    if (valread == -1)
+    {
+        printf("Error reading from socket");
+        return -1;
+    }
+    printf("Server received: %s\n", buffer);
 
     return 0;
 }

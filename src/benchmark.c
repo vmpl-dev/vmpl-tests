@@ -46,7 +46,7 @@ int parse_args(struct bench_args_t *args, int argc, char *argv[])
 int main(int argc, char *atgv[])
 {
     int number_failed;
-    Suite *sys, *proc, *vm, *ipc, *vdso, *security, *seimi, *misc, *xml, *zlib;
+    Suite *sys, *proc, *vm, *ipc, *vdso, *security, *misc, *xml, *zlib;
     SRunner *sr;
 
     struct bench_args_t args;
@@ -65,13 +65,13 @@ int main(int argc, char *atgv[])
     zlib = zlib_suite();
 
     sr = srunner_create(NULL);
-    // srunner_add_suite(sr, sys);
-    // srunner_add_suite(sr, proc);
-    // srunner_add_suite(sr, vm);
-    // srunner_add_suite(sr, ipc);
+    srunner_add_suite(sr, sys);
+    srunner_add_suite(sr, vm);
     srunner_add_suite(sr, vdso);
     srunner_add_suite(sr, xml);
     srunner_add_suite(sr, zlib);
+    srunner_add_suite(sr, proc);
+    srunner_add_suite(sr, ipc);
     srunner_add_suite(sr, security);
     srunner_add_suite(sr, misc);
 

@@ -24,12 +24,14 @@ START_TEST(test_mxml_write)
     ret = mxmlSaveFile(tree, fp, MXML_TEXT_CALLBACK);
     ck_assert_int_eq(ret, 0);
 
+    ret = fclose(fp);
+    ck_assert_int_eq(ret, 0);
+
     mxmlDelete(tree);
 END_TEST
 
 START_TEST(test_mxml_read)
-    int ret;
-    char *str;
+    const char *str;
     mxml_node_t *tree;
     mxml_node_t *node;
     FILE *fp;
@@ -54,6 +56,7 @@ START_TEST(test_mxml_read)
 END_TEST
 
 START_TEST(test_mxml)
+    int ret;
     mxml_node_t *xml;    /* <?xml ... ?> */
     mxml_node_t *data;   /* <data> */
     mxml_node_t *node;   /* <node> */
@@ -76,8 +79,11 @@ START_TEST(test_mxml)
     FILE *fp = fopen("data.xml", "w");
     ck_assert_ptr_ne(fp, NULL);
 
-    mxmlSaveFile(xml, fp, MXML_NO_CALLBACK);
-    fclose(fp);
+    ret = mxmlSaveFile(xml, fp, MXML_NO_CALLBACK);
+    ck_assert_int_eq(ret, 0);
+
+    ret = fclose(fp);
+    ck_assert_int_eq(ret, 0);
 
     /* 释放 XML 文档 */
     mxmlDelete(xml);

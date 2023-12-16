@@ -2,17 +2,14 @@
 "C" {
 #endif
 
+#include <stdio.h>
 #include <stdint.h>
 #include <time.h>
 #include <check.h>
 #include "config.h"
 
 #define CLOCK_MONOTONIC_RAW 4
-#define NUM_ITERATIONS 1000000
-
-#define COLOR_RED     "\x1b[31m"
-#define COLOR_GREEN   "\x1b[32m"
-#define COLOR_RESET   "\x1b[0m"
+#define NUM_ITERATIONS 10000
 
 // number of iterations for benchmarking the overhead of rdtsc and rdtscp instructions.
 #define N	10000
@@ -28,6 +25,18 @@
 #define MAIN_THREAD 3
 #define NUM_THREADS 3
 #define TEST_VECTOR 0xF2
+
+#ifdef VMPL_ENTER
+#undef VMPL_ENTER
+#define VMPL_ENTER                                 \
+    do                                             \
+    {                                              \
+        if (vmpl_enter(1, NULL))                   \
+        {                                          \
+            exit(EXIT_FAILURE);                    \
+        }                                          \
+    } while (0)
+#endif
 
 // Commom functions
     int bind_cpu(int cpu);

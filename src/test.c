@@ -65,9 +65,6 @@ static int test_fork(void)
 
 static void *test_pthread_thread(void *arg)
 {
-	if (dune_enter())
-		return NULL;
-
 	if (check_dune())
 		return NULL;
 

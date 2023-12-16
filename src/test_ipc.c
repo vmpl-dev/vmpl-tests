@@ -16,7 +16,7 @@
 
 START_TEST(test_socket)
 {
-    VMPL_ENTER;
+    int ret = 0;
     pid_t server_pid = fork();
     if (server_pid == -1) {
         perror("fork");
@@ -25,7 +25,7 @@ START_TEST(test_socket)
         // Child process
         bind_cpu(THREAD_1_CORE);
         VMPL_ENTER;
-        vmpl_server(1, NULL);
+        ret = vmpl_server(1, NULL);
     } else {
         // Parent process
         sleep(SLEEP_TIME); // Wait for server to start
@@ -38,7 +38,7 @@ START_TEST(test_socket)
             // Child process
             bind_cpu(THREAD_2_CORE);
             VMPL_ENTER;
-            vmpl_client(1, NULL);
+            ret = vmpl_client(1, NULL);
         } else {
             // Parent process
             int status;
@@ -56,6 +56,7 @@ START_TEST(test_socket)
             }
         }
     }
+    exit(EXIT_SUCCESS);
 }
 END_TEST
 
@@ -63,7 +64,6 @@ sem_t sem;
 
 void* sem_thread_func(void* arg) {
     bind_cpu(THREAD_1_CORE);
-    VMPL_ENTER;
     printf("Thread waiting on semaphore...\n");
     sem_wait(&sem);
     printf("Thread got semaphore!\n");
@@ -72,7 +72,6 @@ void* sem_thread_func(void* arg) {
 
 void* sem_post_func(void* arg) {
     bind_cpu(THREAD_2_CORE);
-    VMPL_ENTER;
     sleep(SLEEP_TIME);
     printf("Posting to semaphore...\n");
     sem_post(&sem);
@@ -82,13 +81,16 @@ void* sem_post_func(void* arg) {
 START_TEST(test_sem)
 {
     pthread_t thread1, thread2;
+    pthread_attr_t attr;
 
     printf("Initializing semaphore...\n");
     sem_init(&sem, 0, 0);
 
     printf("Creating threads...\n");
-    pthread_create(&thread1, NULL, sem_thread_func, NULL);
-    pthread_create(&thread2, NULL, sem_post_func, NULL);
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+    pthread_create(&thread1, &attr, sem_thread_func, NULL);
+    pthread_create(&thread2, &attr, sem_post_func, NULL);
 
     printf("Waiting for threads to finish...\n");
     pthread_join(thread1, NULL);
@@ -103,11 +105,11 @@ END_TEST
 
 START_TEST(test_pipe)
 {
-    VMPL_ENTER;
     int pipefd[2];
     pid_t cpid;
     char buf;
 
+    printf("Creating pipe...\n");
     if (pipe(pipefd) == -1) {
         perror("pipe");
         exit(EXIT_FAILURE);
@@ -120,6 +122,8 @@ START_TEST(test_pipe)
     }
 
     if (cpid == 0) {    /* Child reads from pipe */
+        VMPL_ENTER;
+        printf("Child pipe process\n");
         close(pipefd[1]);          /* Close unused write end */
 
         while (read(pipefd[0], &buf, 1) > 0)
@@ -130,6 +134,8 @@ START_TEST(test_pipe)
         _exit(EXIT_SUCCESS);
 
     } else {            /* Parent writes argv[1] to pipe */
+        VMPL_ENTER;
+        printf("Parent pipe process\n");
         close(pipefd[0]);          /* Close unused read end */
         write(pipefd[1], "test", 4);
         close(pipefd[1]);          /* Reader will see EOF */
@@ -288,8 +294,9 @@ void handle_sigint(int sig)
 START_TEST(test_signal)
 {
     VMPL_ENTER;
-    printf("Press Ctrl-C to exit\n");
     signal(SIGINT, handle_sigint);
+    printf("Press Ctrl-C to exit\n");
+    getchar();
 }
 END_TEST
 
@@ -302,8 +309,7 @@ Suite *ipc_suite(void)
 
     /* Core test case */
     tc_core = tcase_create("IPC");
-
-    tcase_add_test(tc_core, test_socket); // 卡住了
+    tcase_add_test(tc_core, test_socket);
     tcase_add_test(tc_core, test_pipe);
     tcase_add_test(tc_core, test_sem);
     tcase_add_test(tc_core, test_msg);

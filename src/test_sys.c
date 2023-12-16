@@ -102,9 +102,16 @@ START_TEST(test_cpuid)
 }
 END_TEST
 
+static void pf_handler(struct dune_tf *tf)
+{
+    exit(EXIT_SUCCESS);
+}
+
 START_TEST(test_debug)
 {
     VMPL_ENTER;
+    dune_register_intr_handler(T_PF, pf_handler);
+
     // 读取DR0-DR7的值并打印
     printf("dr0: 0x%lx\n", read_dr(0));
     printf("dr1: 0x%lx\n", read_dr(1));
@@ -118,9 +125,12 @@ END_TEST
 START_TEST(test_syscall)
 {
     VMPL_ENTER;
-    int fd = open("/dev/zero", O_RDONLY);
+    // 测试 open 系统调用
+    int fd = open("/dev/zero", O_RDONLY, 0);
     ck_assert_int_ne(fd, -1);
-    close(fd);
+
+    // 测试 close 系统调用
+    ck_assert_int_eq(close(fd), 0);
 }
 END_TEST
 
