@@ -24,7 +24,6 @@ START_TEST(test_socket)
     } else if (server_pid == 0) {
         // Child process
         bind_cpu(THREAD_1_CORE);
-        VMPL_ENTER;
         ret = vmpl_server(1, NULL);
     } else {
         // Parent process
@@ -37,7 +36,6 @@ START_TEST(test_socket)
         } else if (client_pid == 0) {
             // Child process
             bind_cpu(THREAD_2_CORE);
-            VMPL_ENTER;
             ret = vmpl_client(1, NULL);
         } else {
             // Parent process
@@ -122,7 +120,6 @@ START_TEST(test_pipe)
     }
 
     if (cpid == 0) {    /* Child reads from pipe */
-        VMPL_ENTER;
         printf("Child pipe process\n");
         close(pipefd[1]);          /* Close unused write end */
 
@@ -134,7 +131,6 @@ START_TEST(test_pipe)
         _exit(EXIT_SUCCESS);
 
     } else {            /* Parent writes argv[1] to pipe */
-        VMPL_ENTER;
         printf("Parent pipe process\n");
         close(pipefd[0]);          /* Close unused read end */
         write(pipefd[1], "test", 4);
@@ -170,7 +166,6 @@ START_TEST(test_shm)
     } else if (pid1 == 0) {
         // 子进程1
         bind_cpu(THREAD_1_CORE);
-        VMPL_ENTER;
         shm = shmat(shmid, NULL, 0);
         if (shm == (char *) -1) {
             perror("shmat");
@@ -194,7 +189,6 @@ START_TEST(test_shm)
     } else if (pid2 == 0) {
         // 子进程2
         bind_cpu(THREAD_2_CORE);
-        VMPL_ENTER;
         shm = shmat(shmid, NULL, 0);
         if (shm == (char *) -1) {
             perror("shmat");
@@ -247,7 +241,6 @@ START_TEST(test_msg)
     } else if (pid1 == 0) {
         // 子进程1
         bind_cpu(THREAD_1_CORE);
-        VMPL_ENTER;
         if (msgrcv(msqid, &buf, MSG_SIZE, 1, 0) < 0) {
             perror("msgrcv");
             exit(1);
@@ -266,7 +259,6 @@ START_TEST(test_msg)
     } else if (pid2 == 0) {
         // 子进程2
         bind_cpu(THREAD_2_CORE);
-        VMPL_ENTER;
         buf.mtype = 1;
         sprintf(buf.mtext, "Hello, world!");
         if (msgsnd(msqid, &buf, sizeof(buf.mtext), IPC_NOWAIT) < 0) {
@@ -293,7 +285,6 @@ void handle_sigint(int sig)
 
 START_TEST(test_signal)
 {
-    VMPL_ENTER;
     signal(SIGINT, handle_sigint);
     printf("Press Ctrl-C to exit\n");
     getchar();

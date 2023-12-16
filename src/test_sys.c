@@ -12,7 +12,6 @@ static char line[1024];
 
 START_TEST(test_process)
 {
-    VMPL_ENTER;
     printf("vmpl-process: hello world!\n");
 
     int fd;
@@ -32,7 +31,6 @@ END_TEST
 
 START_TEST(test_sys)
 {
-    VMPL_ENTER;
     printf("cr0: 0x%lx\n", read_cr0());
     printf("cr2: 0x%lx\n", read_cr2());
     printf("cr3: 0x%lx\n", read_cr3());
@@ -44,7 +42,6 @@ END_TEST
 
 START_TEST(test_prctl)
 {
-    VMPL_ENTER;
     int ret_fs, ret_gs;
     unsigned long fs_reg_value;
     unsigned long gs_reg_value;
@@ -61,7 +58,6 @@ END_TEST
 
 START_TEST(test_rdtsc)
 {
-    VMPL_ENTER;
 	uint64_t overhead = ~0UL;
 	int i;
 
@@ -85,7 +81,6 @@ static void vc_handler(struct dune_tf *tf)
 
 START_TEST(test_cpuid)
 {
-    VMPL_ENTER;
     unsigned int eax, ebx, ecx, edx;
 
     dune_register_intr_handler(T_VC, vc_handler);
@@ -109,7 +104,6 @@ static void pf_handler(struct dune_tf *tf)
 
 START_TEST(test_debug)
 {
-    VMPL_ENTER;
     dune_register_intr_handler(T_PF, pf_handler);
 
     // 读取DR0-DR7的值并打印
@@ -124,7 +118,6 @@ END_TEST
 
 START_TEST(test_syscall)
 {
-    VMPL_ENTER;
     // 测试 open 系统调用
     int fd = open("/dev/zero", O_RDONLY, 0);
     ck_assert_int_ne(fd, -1);
@@ -136,7 +129,6 @@ END_TEST
 
 START_TEST(test_vsyscall)
 {
-    VMPL_ENTER;
     struct timeval tv;
     struct timezone tz;
 

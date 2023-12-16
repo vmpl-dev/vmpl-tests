@@ -19,7 +19,6 @@ int main() {
         // This is the child process
         printf("This is the child process\n");
         printf("Child process: PID = %d\n", getpid());
-        VMPL_ENTER;
         printf("Child process: VMPL_ENTER\n");
     } else {
         // This is the parent process

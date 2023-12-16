@@ -21,7 +21,6 @@ START_TEST(test_fork)
     } else if (pid == 0) {
         // Child process
         printf("Child process\n");
-        VMPL_ENTER;
         exit(EXIT_SUCCESS);
     } else {
         // Parent process
@@ -49,7 +48,6 @@ START_TEST(test_vfork)
     } else if (pid == 0) {
         // Child process
         printf("Child process\n");
-        VMPL_ENTER;
         exit(EXIT_SUCCESS);
     } else {
         // Parent process
@@ -102,7 +100,6 @@ static void self_ipi_hanlder(struct dune_tf *tf)
 
 START_TEST(test_self_posted_ipi)
 {
-    VMPL_ENTER;
     printf("Hello from main thread\n");
 
     // register IPI handler

@@ -11,7 +11,6 @@
 #include <seccomp.h> /* libseccomp */
 START_TEST(test_seccomp)
 {
-    VMPL_ENTER;
     printf("step 1: unrestricted\n");
 
     // Init the filter
@@ -48,7 +47,6 @@ END_TEST
 
 START_TEST(test_seimi)
 {
-    VMPL_ENTER;
     char *seimi_user;
 
     // Allocate 4096 bytes of memory
@@ -73,7 +71,6 @@ END_TEST
 
 START_TEST(test_seimi_ro)
 {
-    VMPL_ENTER;
     char *seimi_user, *seimi_super;
     long offset;
 

@@ -18,7 +18,6 @@ static uint64_t get_time(void)
 
 START_TEST(test_vdso)
 {
-    VMPL_ENTER;
     int a = getpid();
     int b = getpid();
 
@@ -28,7 +27,6 @@ END_TEST
 
 START_TEST(test_time_vdso)
 {
-    VMPL_ENTER;
     uint64_t start_time, end_time;
     uint64_t total_time = 0;
 
@@ -45,7 +43,6 @@ END_TEST
 
 START_TEST(test_time_syscall)
 {
-    VMPL_ENTER;
     uint64_t start_time, end_time;
     uint64_t total_time = 0;
     time_t t;
@@ -64,7 +61,6 @@ END_TEST
 
 START_TEST(test_time)
 {
-    VMPL_ENTER;
     pid_t pid;
     uint64_t start_time;
     uint64_t end_time;
