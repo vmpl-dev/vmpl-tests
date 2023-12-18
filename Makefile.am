@@ -21,6 +21,7 @@ benchmark_SOURCES = src/benchmark.c \
                     src/test_mem.c \
                     src/test_vdso.c \
                     src/test_security.c \
+                    src/test_mxml.c \
                     src/test_misc.c \
                     src/test_bitmap.c
 benchmark_LDADD = -lvmpl -lpthread -lz -lcheck

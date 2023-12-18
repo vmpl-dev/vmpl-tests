@@ -46,7 +46,6 @@ int parse_args(struct bench_args_t *args, int argc, char *argv[])
 int main(int argc, char *atgv[])
 {
     int number_failed;
-    Suite *sys, *proc, *vm, *ipc, *vdso, *security, *misc, *xml, *zlib;
     SRunner *sr;
 
     struct bench_args_t args;
@@ -54,26 +53,17 @@ int main(int argc, char *atgv[])
         return EXIT_FAILURE;
     }
 
-    sys = sys_suite();
-    proc = proc_suite();
-    vm = vm_suite();
-    ipc = ipc_suite();
-    vdso = vdso_suite();
-    security = security_suite();
-    misc = misc_suite();
-    xml = xml_suite();
-    zlib = zlib_suite();
-
     sr = srunner_create(NULL);
-    srunner_add_suite(sr, sys);
-    srunner_add_suite(sr, vm);
-    srunner_add_suite(sr, vdso);
-    srunner_add_suite(sr, xml);
-    srunner_add_suite(sr, zlib);
-    srunner_add_suite(sr, proc);
-    srunner_add_suite(sr, ipc);
-    srunner_add_suite(sr, security);
-    srunner_add_suite(sr, misc);
+    srunner_add_suite(sr, bitmap_suite());
+    srunner_add_suite(sr, sys_suite());
+    srunner_add_suite(sr, vm_suite());
+    srunner_add_suite(sr, vdso_suite());
+    srunner_add_suite(sr, xml_suite());
+    srunner_add_suite(sr, zlib_suite());
+    srunner_add_suite(sr, proc_suite());
+    srunner_add_suite(sr, ipc_suite());
+    srunner_add_suite(sr, security_suite());
+    srunner_add_suite(sr, misc_suite());
 
     if (strcmp(args.log_file, "stdout") == 0) {
         srunner_set_log(sr, NULL);
