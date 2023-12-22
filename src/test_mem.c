@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -10,6 +11,32 @@
 #include <vmpl/log.h>
 
 #include "benchmark.h"
+
+#define PHYS_ADDR 0x0
+#define SIZE 10
+
+START_TEST(test_dev_mem)
+{
+    int fd;
+    void *map_base;
+    unsigned char *ptr;
+
+    fd = open("/dev/mem", O_RDONLY);
+    ck_assert_msg(fd != -1, "Error opening /dev/mem");
+
+    map_base = mmap(NULL, SIZE, PROT_READ, MAP_SHARED, fd, PHYS_ADDR);
+    ck_assert_msg(map_base != MAP_FAILED, "Error mapping memory");
+
+    ptr = (unsigned char *)map_base;
+    for (int i = 0; i < SIZE; i++) {
+        printf("0x%02x ", ptr[i]);
+    }
+    printf("\n");
+
+    munmap(map_base, SIZE);
+    close(fd);
+}
+END_TEST
 
 START_TEST(test_mmap)
 {
@@ -45,6 +72,19 @@ START_TEST(test_mprotect)
     printf("addr: %p\n", addr);
     int ret = mprotect(addr, 4096, PROT_READ | PROT_WRITE);
     ck_assert_int_eq(ret, 0);
+    close(fd);
+}
+END_TEST
+
+START_TEST(test_mremap)
+{
+    int fd = open("file.txt", O_RDONLY);
+    void *addr = mmap(NULL, 4096, PROT_READ, MAP_PRIVATE, fd, 0);
+    ck_assert_ptr_ne(addr, MAP_FAILED);
+    printf("addr: %p\n", addr);
+    void *new_addr = mremap(addr, 4096, 8192, MREMAP_MAYMOVE);
+    ck_assert_ptr_ne(new_addr, MAP_FAILED);
+    printf("new_addr: %p\n", new_addr);
     close(fd);
 }
 END_TEST
@@ -106,9 +146,11 @@ Suite *vm_suite(void)
     /* Core test case */
     tc_core = tcase_create("Memory");
 
+    tcase_add_test(tc_core, test_dev_mem);
     tcase_add_test(tc_core, test_mmap);
     tcase_add_test(tc_core, test_munmap);
     tcase_add_test(tc_core, test_mprotect);
+    tcase_add_test(tc_core, test_mremap);
     tcase_add_test(tc_core, test_sbrk);
     tcase_add_test(tc_core, test_pgflt);
 

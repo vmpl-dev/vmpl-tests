@@ -1,5 +1,6 @@
 AUTOMAKE_OPTIONS = subdir-objects
 ACLOCAL_AMFLAGS = -I m4
+AM_OBJDIR = .obj
 
 # Specify the include directories for vmpl library
 AM_CPPFLAGS = -I$(top_srcdir)/include
@@ -9,6 +10,9 @@ AM_LDFLAGS =
 # Specify the target and source files for the myapp project
 # Specify the linker flags and the libraries
 bin_PROGRAMS = benchmark hello fork timetest test test_sandbox test_fork xsave xsave_new \
+                test_brk \
+                test_sbrk \
+                test_pagemap \
                 test_pthread
 
 benchmark_SOURCES = src/benchmark.c \
@@ -66,3 +70,7 @@ xsave_new_SOURCES = src/xsave-new.c
 
 test_pthread_SOURCES = src/test_pthread.c
 test_pthread_LDADD = -lpthread
+
+test_brk_SOURCES = src/test_brk.c
+test_sbrk_SOURCES = src/test_sbrk.c
+test_pagemap_SOURCES = src/test_pagemap.c
