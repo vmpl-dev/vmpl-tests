@@ -3,8 +3,7 @@ AM_INIT_AUTOMAKE([foreign])
 AM_SILENT_RULES([yes])
 
 # Checks for programs
-AC_PROG_CC([gcc])
-AC_PROG_CXX([g++])
+AC_PROG_CC([musl-gcc])
 AC_PROG_INSTALL
 # Set installation prefix
 AC_PREFIX_DEFAULT([/usr/local/musl])

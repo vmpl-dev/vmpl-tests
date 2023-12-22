@@ -25,7 +25,6 @@ benchmark_SOURCES = src/benchmark.c \
                     src/test_mem.c \
                     src/test_vdso.c \
                     src/test_security.c \
-                    src/test_mxml.c \
                     src/test_misc.c \
                     src/test_bitmap.c
 benchmark_LDADD = -lvmpl -lpthread -lz -lcheck
@@ -73,4 +72,5 @@ test_pthread_LDADD = -lpthread
 
 test_brk_SOURCES = src/test_brk.c
 test_sbrk_SOURCES = src/test_sbrk.c
+test_sbrk_LDFLAGS = -lvmpl -lcheck
 test_pagemap_SOURCES = src/test_pagemap.c
