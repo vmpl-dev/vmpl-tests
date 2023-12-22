@@ -114,7 +114,7 @@ Suite *security_suite(void)
     tc_core = tcase_create("Security");
 
 #ifdef HAVE_SECCOMP
-    tcase_add_test(tc_core, test_seccomp);
+    tcase_add_test_raise_signal(tc_core, test_seccomp, SIGSYS);
 #endif
     tcase_add_test_raise_signal(tc_core, test_seimi, SIGILL);
     // tcase_add_test(tc_core, test_seimi_ro);
