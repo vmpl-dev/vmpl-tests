@@ -12,6 +12,7 @@ AM_LDFLAGS =
 bin_PROGRAMS = benchmark hello fork timetest test test_sandbox test_fork xsave xsave_new \
                 test_brk \
                 test_sbrk \
+                test_maps \
                 test_pagemap \
                 test_pthread
 
@@ -73,4 +74,5 @@ test_pthread_LDADD = -lpthread
 test_brk_SOURCES = src/test_brk.c
 test_sbrk_SOURCES = src/test_sbrk.c
 test_sbrk_LDFLAGS = -lvmpl -lcheck
+test_maps_SOURCES = src/test_maps.c
 test_pagemap_SOURCES = src/test_pagemap.c
