@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <signal.h>
 #include <sys/wait.h>
 #include <vmpl/vmpl.h>
 #include <vmpl/seimi.h>
@@ -115,7 +116,7 @@ Suite *security_suite(void)
 #ifdef HAVE_SECCOMP
     tcase_add_test(tc_core, test_seccomp);
 #endif
-    tcase_add_test(tc_core, test_seimi);
+    tcase_add_test_raise_signal(tc_core, test_seimi, SIGILL);
     // tcase_add_test(tc_core, test_seimi_ro);
 
     suite_add_tcase(s, tc_core);

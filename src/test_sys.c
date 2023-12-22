@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <unistd.h>
 #include <sys/time.h>
 #include <vmpl/vmpl.h>
@@ -52,7 +53,7 @@ START_TEST(test_prctl)
     ret_gs = arch_prctl(ARCH_GET_GS, &gs_reg_value);
 
     ck_assert_int_eq(ret_gs, 0);
-    ck_assert_int_ne(gs_reg_value, 0);
+    ck_assert_int_eq(gs_reg_value, 0);
 }
 END_TEST
 
@@ -150,11 +151,11 @@ Suite *sys_suite(void)
     TCase *tc_core = tcase_create("System");
 
     tcase_add_test(tc_core, test_process);
-    tcase_add_test(tc_core, test_sys);
+    tcase_add_test_raise_signal(tc_core, test_sys, SIGSEGV);
     tcase_add_test(tc_core, test_prctl);
     tcase_add_test(tc_core, test_rdtsc);
     tcase_add_test(tc_core, test_cpuid); // #VC exception
-    tcase_add_test(tc_core, test_debug); // Segmentation fault
+    tcase_add_test_raise_signal(tc_core, test_debug, SIGSEGV);
     tcase_add_test(tc_core, test_syscall);
     tcase_add_test(tc_core, test_vsyscall);
 

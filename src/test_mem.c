@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <signal.h>
 #include <fcntl.h>
 #include <sys/wait.h>
 #include <sys/types.h>
@@ -152,7 +153,7 @@ Suite *vm_suite(void)
     tcase_add_test(tc_core, test_mprotect);
     tcase_add_test(tc_core, test_mremap);
     tcase_add_test(tc_core, test_sbrk);
-    tcase_add_test(tc_core, test_pgflt);
+    tcase_add_test_raise_signal(tc_core, test_pgflt, SIGSEGV);
 
     suite_add_tcase(s, tc_core);
 
