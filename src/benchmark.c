@@ -48,7 +48,10 @@ int main(int argc, char *atgv[])
     int number_failed;
     SRunner *sr;
 
-    struct bench_args_t args;
+    struct bench_args_t args = {
+        .log_file = "stdout",
+    };
+
     if (parse_args(&args, argc, atgv) < 0) {
         return EXIT_FAILURE;
     }
