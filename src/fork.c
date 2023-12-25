@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
   else if (pid == 0) {
     printf("child pid = %d\n", getpid());
     sleep(5);
-    exit(EXIT_SUCCESS);
+    // exit(EXIT_SUCCESS);
   } else
     do {
       if ((pid = waitpid(pid, &status, WNOHANG)) == -1)
@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
         time(&t);
         printf("child is still running at %s", ctime(&t));
         sleep(1);
-        exit(EXIT_SUCCESS);
+        // exit(EXIT_SUCCESS);
       } else {
         if (WIFEXITED(status))
           printf("child exited with status of %d\n", WEXITSTATUS(status));

@@ -4,10 +4,9 @@
 #include <unistd.h>
 
 void* thread_func(void* arg) {
-    while (1) {
-        printf("Child thread is running...\n");
-        sleep(1);
-    }
+    printf("Child thread is running...\n");
+    sleep(1);
+    printf("Child thread is exiting...\n");
     return NULL;
 }
 

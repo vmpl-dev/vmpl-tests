@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <sys/wait.h>
 #include <vmpl/vmpl.h>
 
@@ -20,6 +21,7 @@ int main() {
         printf("This is the child process\n");
         printf("Child process: PID = %d\n", getpid());
         printf("Child process: VMPL_ENTER\n");
+        exit(EXIT_SUCCESS);
     } else {
         // This is the parent process
         printf("This is the parent process\n");
