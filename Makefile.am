@@ -15,6 +15,7 @@ bin_PROGRAMS = benchmark hello fork timetest test test_sandbox test_fork xsave x
                 test_maps \
                 test_pagemap \
                 test_spsc \
+                test_signal \
                 test_pthread
 
 benchmark_SOURCES = src/benchmark.c \
@@ -74,6 +75,9 @@ test_pthread_LDADD = -lpthread
 
 test_spsc_SOURCES = src/test_spsc.c
 test_spsc_LDADD = -lpthread
+
+test_signal_SOURCES = src/test_signal.c
+test_signal_LDADD = -lpthread -lcheck
 
 test_brk_SOURCES = src/test_brk.c
 test_sbrk_SOURCES = src/test_sbrk.c

@@ -23,7 +23,6 @@ START_TEST(test_socket)
         exit(EXIT_FAILURE);
     } else if (server_pid == 0) {
         // Child process
-        bind_cpu(THREAD_1_CORE);
         ret = vmpl_server(1, NULL);
     } else {
         // Parent process
@@ -35,7 +34,7 @@ START_TEST(test_socket)
             exit(EXIT_FAILURE);
         } else if (client_pid == 0) {
             // Child process
-            bind_cpu(THREAD_2_CORE);
+
             ret = vmpl_client(1, NULL);
         } else {
             // Parent process
@@ -61,7 +60,6 @@ END_TEST
 sem_t sem;
 
 void* sem_thread_func(void* arg) {
-    bind_cpu(THREAD_1_CORE);
     printf("Thread waiting on semaphore...\n");
     sem_wait(&sem);
     printf("Thread got semaphore!\n");
@@ -69,7 +67,6 @@ void* sem_thread_func(void* arg) {
 }
 
 void* sem_post_func(void* arg) {
-    bind_cpu(THREAD_2_CORE);
     sleep(SLEEP_TIME);
     printf("Posting to semaphore...\n");
     sem_post(&sem);
@@ -165,7 +162,7 @@ START_TEST(test_shm)
         exit(1);
     } else if (pid1 == 0) {
         // 子进程1
-        bind_cpu(THREAD_1_CORE);
+
         shm = shmat(shmid, NULL, 0);
         if (shm == (char *) -1) {
             perror("shmat");
@@ -188,7 +185,7 @@ START_TEST(test_shm)
         exit(1);
     } else if (pid2 == 0) {
         // 子进程2
-        bind_cpu(THREAD_2_CORE);
+        
         shm = shmat(shmid, NULL, 0);
         if (shm == (char *) -1) {
             perror("shmat");
@@ -240,7 +237,7 @@ START_TEST(test_msg)
         exit(1);
     } else if (pid1 == 0) {
         // 子进程1
-        bind_cpu(THREAD_1_CORE);
+
         if (msgrcv(msqid, &buf, MSG_SIZE, 1, 0) < 0) {
             perror("msgrcv");
             exit(1);
@@ -258,7 +255,7 @@ START_TEST(test_msg)
         exit(1);
     } else if (pid2 == 0) {
         // 子进程2
-        bind_cpu(THREAD_2_CORE);
+        
         buf.mtype = 1;
         sprintf(buf.mtext, "Hello, world!");
         if (msgsnd(msqid, &buf, sizeof(buf.mtext), IPC_NOWAIT) < 0) {

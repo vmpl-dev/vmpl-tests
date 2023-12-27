@@ -10,13 +10,7 @@
 #include <signal.h>
 #endif
 
-#ifdef DUNE_TEST
-#include "libdune/dune.h"
-#else
-#include <vmpl/sys.h>
-#include <vmpl/vmpl.h>
-#define dune_flush_tlb() flush_tlb()
-#endif
+#include <vmpl/dune.h>
 
 static int check_dune(void)
 {

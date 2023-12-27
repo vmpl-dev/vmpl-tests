@@ -122,7 +122,7 @@ static void pgflt_handler(struct dune_tf *tf)
 		log_err("dune: page fault at unmapped addr 0x%016lx", cr2);
 	} else {
 		log_warn("dune: page fault at mapped addr 0x%016lx", cr2);
-        *ptep |= PTE_PRESENT | PTE_WRITE;
+        *ptep |= PTE_P | PTE_W;
     }
 }
 
