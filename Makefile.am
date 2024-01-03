@@ -5,7 +5,7 @@ AM_OBJDIR = .obj
 # Specify the include directories for vmpl library
 AM_CPPFLAGS = -I$(top_srcdir)/include
 AM_CFLAGS = -Wall -g -MD -O2 -z noexecstack
-AM_LDFLAGS = -L. -lvmpl -lhotcalls
+AM_LDFLAGS = -L. -lvmpl -lhotcalls -ldict
 
 # Specify the target and source files for the myapp project
 # Specify the linker flags and the libraries
@@ -30,7 +30,7 @@ benchmark_SOURCES = src/benchmark.c \
                     src/test_security.c \
                     src/test_misc.c \
                     src/test_bitmap.c
-benchmark_LDADD = -lvmpl -lpthread -lz -lcheck
+benchmark_LDADD = -lvmpl -lpthread -lz -lcheck -lhotcalls -ldict
 
 if USE_ZLIB
 benchmark_SOURCES += src/test_zlib.c
@@ -64,7 +64,7 @@ test_sandbox_LDADD =
 
 test_fork_SOURCES = src/test_fork.c
 test_fork_LDFLAGS = -pthread
-test_fork_LDADD = -lvmpl -lhotcalls
+test_fork_LDADD = -lvmpl -lhotcalls -ldict
 
 xsave_SOURCES = src/xsave.c
 
@@ -81,6 +81,6 @@ test_signal_LDADD = -lpthread -lcheck
 
 test_brk_SOURCES = src/test_brk.c
 test_sbrk_SOURCES = src/test_sbrk.c
-test_sbrk_LDFLAGS = -lvmpl -lcheck -lhotcalls
+test_sbrk_LDFLAGS = -lvmpl -lcheck -lhotcalls -ldict
 test_maps_SOURCES = src/test_maps.c
 test_pagemap_SOURCES = src/test_pagemap.c
