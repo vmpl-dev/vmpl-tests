@@ -84,3 +84,5 @@ test_sbrk_SOURCES = src/test_sbrk.c
 test_sbrk_LDFLAGS = -lvmpl -lcheck -lhotcalls -ldict
 test_maps_SOURCES = src/test_maps.c
 test_pagemap_SOURCES = src/test_pagemap.c
+test_alloc_SOURCES = src/test_alloc.c
+test_alloc_LDFLAGS = -lvmpl -lcheck -lhotcalls -ldict
