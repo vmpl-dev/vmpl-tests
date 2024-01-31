@@ -137,7 +137,6 @@ static void *ipi_thread(void *arg)
 
 START_TEST(test_posted_ipi)
 {
-	volatile int ret;
 	cpu_set_t cpus;
 	pthread_t pthreads[NUM_THREADS];
 	volatile bool ready[NUM_THREADS];
@@ -205,8 +204,8 @@ Suite *proc_suite(void)
     tcase_add_test(tc_core, test_fork);
     tcase_add_test(tc_core, test_vfork);
     tcase_add_test(tc_core, test_pthread); // [pthread_join有问题]
-    // tcase_add_test(tc_core, test_posted_ipi);
-    // tcase_add_test(tc_core, test_self_posted_ipi);
+    tcase_add_test(tc_core, test_posted_ipi);
+    tcase_add_test(tc_core, test_self_posted_ipi);
 
     suite_add_tcase(s, tc_core);
 

@@ -4,19 +4,14 @@ AM_OBJDIR = .obj
 
 # Specify the include directories for vmpl library
 AM_CPPFLAGS = -I$(top_srcdir)/include
-AM_CFLAGS = -Wall -g -MD -O2 -z noexecstack
+AM_CFLAGS = -Wall -g -MD -O3 -z noexecstack
 AM_LDFLAGS = -L. -lvmpl -lhotcalls -ldict
 
 # Specify the target and source files for the myapp project
 # Specify the linker flags and the libraries
-bin_PROGRAMS = benchmark hello fork timetest test test_sandbox test_fork xsave xsave_new \
-                test_brk \
-                test_sbrk \
-                test_maps \
-                test_pagemap \
-                test_spsc \
-                test_signal \
-                test_pthread
+bin_PROGRAMS = benchmark hello fork timetest test test_sandbox  \
+                test_ipi \
+                test_signal
 
 benchmark_SOURCES = src/benchmark.c \
                     src/server.c src/client.c \
@@ -62,27 +57,8 @@ test_sandbox_SOURCES = src/test_sandbox.c
 test_sandbox_LDFLAGS = -pthread 
 test_sandbox_LDADD = 
 
-test_fork_SOURCES = src/test_fork.c
-test_fork_LDFLAGS = -pthread
-test_fork_LDADD = -lvmpl -lhotcalls -ldict
-
-xsave_SOURCES = src/xsave.c
-
-xsave_new_SOURCES = src/xsave-new.c
-
-test_pthread_SOURCES = src/test_pthread.c
-test_pthread_LDADD = -lpthread
-
-test_spsc_SOURCES = src/test_spsc.c
-test_spsc_LDADD = -lpthread
-
 test_signal_SOURCES = src/test_signal.c
 test_signal_LDADD = -lpthread -lcheck
 
-test_brk_SOURCES = src/test_brk.c
-test_sbrk_SOURCES = src/test_sbrk.c
-test_sbrk_LDFLAGS = -lvmpl -lcheck -lhotcalls -ldict
-test_maps_SOURCES = src/test_maps.c
-test_pagemap_SOURCES = src/test_pagemap.c
-test_alloc_SOURCES = src/test_alloc.c
-test_alloc_LDFLAGS = -lvmpl -lcheck -lhotcalls -ldict
+test_ipi_SOURCES = src/test_ipi.c
+test_ipi_LDFLAGS = -lvmpl -lhotcalls -ldict

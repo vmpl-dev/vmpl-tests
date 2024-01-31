@@ -1,5 +1,8 @@
 #include <stdlib.h>
 #include <signal.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #include <check.h>
 
 START_TEST (test_signal)

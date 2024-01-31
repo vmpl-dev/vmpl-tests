@@ -84,6 +84,7 @@ START_TEST(test_time)
     end_time = rdtsc();
     total_time = end_time - start_time;
 
+    printf("pid = %d\n", pid);
     printf("Average time: %lu cycles\n", total_time / NUM_ITERATIONS);
 }
 END_TEST

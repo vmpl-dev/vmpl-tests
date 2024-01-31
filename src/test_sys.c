@@ -18,7 +18,7 @@ START_TEST(test_process)
     int fd;
     ssize_t num_read;
     fd = open("/proc/self/maps", O_RDONLY, 0);
-    ck_assert_ptr_ne(fd, -1);
+    ck_assert_int_ne(fd, -1);
 
     while ((num_read = read(fd, line, 1024)) > 0) {
         ssize_t num_written = write(STDOUT_FILENO, line, num_read);

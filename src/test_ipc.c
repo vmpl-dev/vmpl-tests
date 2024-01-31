@@ -16,7 +16,7 @@
 
 START_TEST(test_socket)
 {
-    int ret = 0;
+    int ret = EXIT_SUCCESS;
     pid_t server_pid = fork();
     if (server_pid == -1) {
         perror("fork");
@@ -53,7 +53,7 @@ START_TEST(test_socket)
             }
         }
     }
-    exit(EXIT_SUCCESS);
+    exit(ret);
 }
 END_TEST
 

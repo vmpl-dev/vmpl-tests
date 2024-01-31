@@ -57,12 +57,12 @@ int main(int argc, char *atgv[])
     }
 
     sr = srunner_create(NULL);
-    // srunner_add_suite(sr, sys_suite());
-    // srunner_add_suite(sr, vm_suite());
-    // srunner_add_suite(sr, vdso_suite());
-    // srunner_add_suite(sr, xml_suite());
-    // srunner_add_suite(sr, zlib_suite());
-    // srunner_add_suite(sr, proc_suite());
+    srunner_add_suite(sr, sys_suite());
+    srunner_add_suite(sr, vm_suite());
+    srunner_add_suite(sr, vdso_suite());
+    srunner_add_suite(sr, xml_suite());
+    srunner_add_suite(sr, zlib_suite());
+    srunner_add_suite(sr, proc_suite());
     srunner_add_suite(sr, ipc_suite());
     srunner_add_suite(sr, bitmap_suite());
     srunner_add_suite(sr, security_suite());
