@@ -10,6 +10,7 @@ AM_LDFLAGS = -L. -lvmpl -lhotcalls -ldict
 # Specify the target and source files for the myapp project
 # Specify the linker flags and the libraries
 bin_PROGRAMS = benchmark hello fork timetest test test_sandbox  \
+                test_vmpl_hot_calls \
                 test_ipi \
                 test_signal
 
@@ -56,6 +57,9 @@ test_LDADD = -lvmpl -lpthread
 test_sandbox_SOURCES = src/test_sandbox.c
 test_sandbox_LDFLAGS = -pthread 
 test_sandbox_LDADD = 
+
+test_vmpl_hot_calls_SOURCES = src/test_vmpl_hot_calls.c
+test_vmpl_hot_calls_LDADD = -lvmpl -lhotcalls -ldict
 
 test_signal_SOURCES = src/test_signal.c
 test_signal_LDADD = -lpthread -lcheck
