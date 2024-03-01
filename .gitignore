@@ -20,6 +20,7 @@ configure.ac~
 debian
 depcomp
 .deps
+.dirstamp
 include/config.h
 include/stamp-h1
 install-sh

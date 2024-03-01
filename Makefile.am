@@ -9,17 +9,13 @@ AM_LDFLAGS = -L. -lvmpl -lhotcalls -ldict
 
 # Specify the target and source files for the myapp project
 # Specify the linker flags and the libraries
-bin_PROGRAMS = benchmark hello fork timetest test test_sandbox  \
-                test_vmpl_hot_calls \
-                test_ipi \
-                test_signal
-
+bin_PROGRAMS = benchmark
 benchmark_SOURCES = src/benchmark.c \
                     src/server.c src/client.c \
-                    src/bench/bench_dune_ring.c \
-                    src/semaphore_test.c \
                     src/test_sys.c \
                     src/test_proc.c \
+                    src/test_signal.c \
+                    src/test_sem.c \
                     src/test_ipc.c \
                     src/test_mem.c \
                     src/test_vdso.c \
@@ -41,28 +37,3 @@ endif
 if USE_SECCOMP
 benchmark_LDADD += -lseccomp
 endif
-
-hello_SOURCES = src/hello.c
-hello_LDADD = -lvmpl
-
-fork_SOURCES = src/fork.c
-fork_LDADD = -lpthread
-
-timetest_SOURCES = src/timetest.c
-timetest_LDADD = -lpthread
-
-test_SOURCES = src/test.c
-test_LDADD = -lvmpl -lpthread
-
-test_sandbox_SOURCES = src/test_sandbox.c
-test_sandbox_LDFLAGS = -pthread 
-test_sandbox_LDADD = 
-
-test_vmpl_hot_calls_SOURCES = src/test_vmpl_hot_calls.c
-test_vmpl_hot_calls_LDADD = -lvmpl -lhotcalls -ldict
-
-test_signal_SOURCES = src/test_signal.c
-test_signal_LDADD = -lpthread -lcheck
-
-test_ipi_SOURCES = src/test_ipi.c
-test_ipi_LDFLAGS = -lvmpl -lhotcalls -ldict

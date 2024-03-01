@@ -46,9 +46,9 @@
     int vmpl_client(int argc, char *argv[]);
 
 // Test functions
-    Suite *bench_dune_ring(void);
     Suite *bitmap_suite(void);
     Suite *sys_suite(void);
+    Suite *signal_suite(void);
     Suite *proc_suite(void);
     Suite *vm_suite(void);
     Suite *ipc_suite(void);

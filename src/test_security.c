@@ -117,7 +117,7 @@ Suite *security_suite(void)
     tcase_add_test_raise_signal(tc_core, test_seccomp, SIGSYS);
 #endif
     tcase_add_test_raise_signal(tc_core, test_seimi, SIGILL);
-    // tcase_add_test(tc_core, test_seimi_ro);
+    tcase_add_test(tc_core, test_seimi_ro);
 
     suite_add_tcase(s, tc_core);
 

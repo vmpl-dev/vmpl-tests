@@ -111,7 +111,7 @@ START_TEST(test_sbrk)
 }
 END_TEST
 
-static void pgflt_handler(struct dune_tf *tf)
+static void pgflt_handler(uintptr_t addr, uint64_t fec, struct dune_tf *tf)
 {
     int rc, level;
 	uint64_t cr2 = read_cr2();
