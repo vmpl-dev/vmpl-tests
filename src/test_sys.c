@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <unistd.h>
+#include <x86intrin.h>
 #include <sys/time.h>
 #include <vmpl/vmpl.h>
 #include <vmpl/sys.h>
@@ -98,6 +99,53 @@ START_TEST(test_cpuid)
 }
 END_TEST
 
+START_TEST(test_xsave)
+{
+    // Allocate memory for XSAVE area
+    uint8_t* xsave_area = (uint8_t*)malloc(XSAVE_SIZE);
+    if (xsave_area == NULL) {
+        printf("Failed to allocate memory for XSAVE area\n");
+        return 1;
+    }
+
+    // Initialize XSAVE area with some data
+    memset(xsave_area, 0xAB, XSAVE_SIZE);
+
+    // Save the XSAVE area
+    _xsave(xsave_area, 0xFFFFFFFF);
+
+    // Print the contents of the XSAVE area
+    for (int i = 0; i < XSAVE_SIZE; i++) {
+        printf("%02X ", xsave_area[i]);
+        if ((i + 1) % 16 == 0) {
+            printf("\n");
+        }
+    }
+
+    // Free the allocated memory
+    free(xsave_area);
+}
+END_TEST
+
+START_TEST(test_xgetbv)
+{
+    uint64_t xstate_bv = _xgetbv(0);
+    printf("XCR0: 0x%llx\n", xstate_bv);
+
+    uint64_t xcr0 = 0;
+    __asm__ volatile("xgetbv" : "=a"(xcr0) : "c"(0) : "%edx");
+    printf("XCR0: 0x%llx\n", xcr0);
+
+    if (xstate_bv & 0x2) {
+        uint64_t xsave[2];
+        __asm__ volatile("xsave %0" : "=m"(*xsave) : "a"(0), "d"(0) : "memory");
+        printf("XSAVE: 0x%llx%llx\n", xsave[1], xsave[0]);
+    }
+
+    return 0;
+}
+END_TEST
+
 static void pf_handler(struct dune_tf *tf)
 {
     exit(EXIT_SUCCESS);
@@ -155,6 +203,8 @@ Suite *sys_suite(void)
     tcase_add_test(tc_core, test_prctl);
     tcase_add_test(tc_core, test_rdtsc);
     tcase_add_test(tc_core, test_cpuid); // #VC exception
+    tcase_add_test(tc_core, test_xsave);
+    tcase_add_test(tc_core, test_xgetbv);
     tcase_add_test_raise_signal(tc_core, test_debug, SIGSEGV);
     tcase_add_test(tc_core, test_syscall);
     tcase_add_test(tc_core, test_vsyscall);

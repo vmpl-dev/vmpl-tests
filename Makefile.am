@@ -4,7 +4,7 @@ AM_OBJDIR = .obj
 
 # Specify the include directories for vmpl library
 AM_CPPFLAGS = -I$(top_srcdir)/include
-AM_CFLAGS = -Wall -g -MD -O3 -z noexecstack
+AM_CFLAGS = -Wall -g -MD -O3 -z noexecstack -DXSAVE -mxsave -mxsaveopt -mavx -mno-avx2
 AM_LDFLAGS = -L. -lvmpl -lhotcalls -ldict
 
 # Specify the target and source files for the myapp project

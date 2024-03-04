@@ -25,6 +25,8 @@
 #define MAIN_THREAD 3
 #define NUM_THREADS 3
 #define TEST_VECTOR 0xF2
+// xsave test constants
+#define XSAVE_SIZE 512
 
 #ifdef VMPL_ENTER
 #undef VMPL_ENTER
