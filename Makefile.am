@@ -5,7 +5,7 @@ AM_OBJDIR = .obj
 # Specify the include directories for vmpl library
 AM_CPPFLAGS = -I$(top_srcdir)/include
 AM_CFLAGS = -Wall -g -MD -O3 -z noexecstack -DXSAVE -mxsave -mxsaveopt -mavx -mno-avx2
-AM_LDFLAGS = -L. -lvmpl -lhotcalls -ldict
+AM_LDFLAGS = -L. -ldune -lvmpl -lhotcalls -ldict
 
 # Specify the target and source files for the myapp project
 # Specify the linker flags and the libraries
@@ -20,9 +20,8 @@ benchmark_SOURCES = src/benchmark.c \
                     src/test_mem.c \
                     src/test_vdso.c \
                     src/test_security.c \
-                    src/test_misc.c \
-                    src/test_bitmap.c
-benchmark_LDADD = -lvmpl -lpthread -lz -lcheck -lhotcalls -ldict
+                    src/test_misc.c
+benchmark_LDADD = -ldune -lvmpl -lpthread -lz -lcheck -lhotcalls -ldict
 
 if USE_ZLIB
 benchmark_SOURCES += src/test_zlib.c

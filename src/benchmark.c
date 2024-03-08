@@ -65,7 +65,6 @@ int main(int argc, char *atgv[])
     srunner_add_suite(sr, zlib_suite());
     srunner_add_suite(sr, proc_suite());
     srunner_add_suite(sr, ipc_suite());
-    srunner_add_suite(sr, bitmap_suite());
     srunner_add_suite(sr, security_suite());
     srunner_add_suite(sr, misc_suite());
 

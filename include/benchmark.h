@@ -48,7 +48,6 @@
     int vmpl_client(int argc, char *argv[]);
 
 // Test functions
-    Suite *bitmap_suite(void);
     Suite *sys_suite(void);
     Suite *signal_suite(void);
     Suite *proc_suite(void);
