@@ -102,6 +102,9 @@ START_TEST(test_self_posted_ipi)
 {
     printf("Hello from main thread\n");
 
+    // APIC init for VMPL mode
+    apic_init_rt_entry();
+
     // register IPI handler
     dune_register_intr_handler(TEST_VECTOR, self_ipi_hanlder);
 
