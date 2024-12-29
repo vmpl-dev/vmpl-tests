@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <mxml.h>
+#include <libmxml4/mxml.h>
 
 #include "benchmark.h"
 

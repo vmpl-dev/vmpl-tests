@@ -7,9 +7,11 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <sys/mman.h>
+#include <vmpl/sys.h>
 #include <vmpl/vmpl.h>
-#include <vmpl/mm.h>
+#include <vmpl/pgtable.h>
 #include <vmpl/log.h>
+#include <asm/ptrace.h>
 
 #include "benchmark.h"
 
@@ -111,12 +113,12 @@ START_TEST(test_sbrk)
 }
 END_TEST
 
-static void pgflt_handler(uintptr_t addr, uint64_t fec, struct dune_tf *tf)
+static void pgflt_handler(uintptr_t addr, uint64_t fec, struct pt_regs *tf)
 {
     int rc, level;
 	uint64_t cr2 = read_cr2();
 	pte_t *ptep;
-	log_warn("dune: page fault at 0x%016lx, error-code = %x", cr2, tf->err);
+	log_warn("dune: page fault at 0x%016lx, error-code = %x", cr2, tf->orig_rax);
 	rc = lookup_address(cr2, &level, &ptep);
 	if (rc != 0) {
 		log_err("dune: page fault at unmapped addr 0x%016lx", cr2);

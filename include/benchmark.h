@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <time.h>
 #include <check.h>
-#include "config.h"
+#include <vmpl/config.h>
 
 #define CLOCK_MONOTONIC_RAW 4
 #define NUM_ITERATIONS 10000

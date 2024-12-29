@@ -129,9 +129,12 @@ END_TEST
 
 START_TEST(test_xgetbv)
 {
+#ifdef __MUSL__
     uint64_t xstate_bv = _xgetbv(0);
+#else
+    uint64_t xstate_bv = _xgetbv(0);
+#endif
     printf("XCR0: 0x%llx\n", xstate_bv);
-
     uint64_t xcr0 = 0;
     __asm__ volatile("xgetbv" : "=a"(xcr0) : "c"(0) : "%edx");
     printf("XCR0: 0x%llx\n", xcr0);

@@ -8,7 +8,6 @@
 #include <sched.h>
 #include <sys/wait.h>
 #include <vmpl/vmpl.h>
-#include <vmpl/apic.h>
 
 #include "benchmark.h"
 
